@@ -217,6 +217,15 @@
   .spec-summary { font-size: 12px; color: var(--sub); line-height: 1.7; }
   .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
   .modal-actions .reset, .modal-actions .action { flex: 1; margin-bottom: 0; }
+  .order-status {
+    margin-top: 12px; padding: 9px 12px;
+    border-radius: 8px; font-size: 12.5px; text-align: center;
+    background: var(--accent-soft); color: var(--accent);
+  }
+  .order-status[hidden] { display: none; }
+  .order-status.ok  { background: #e6f6ec; color: #1f9d55; }
+  .order-status.err { background: #fdecea; color: #d6492f; }
+  .modal-actions .action:disabled { opacity: .6; cursor: default; }
   @media (max-width: 680px) {
     .modal-body { flex-direction: column; }
   }
@@ -353,7 +362,7 @@
 </div>
 
 <div id="orderModal" class="modal-overlay" hidden>
-  <form id="orderForm" class="modal" action="https://formsubmit.co/issei.masuya@onebe-create.com" method="POST" enctype="multipart/form-data">
+  <form id="orderForm" class="modal">
     <button type="button" class="modal-close" id="orderClose" title="閉じる">×</button>
     <h2 class="modal-title">パンフレット印刷を依頼</h2>
 
@@ -387,12 +396,7 @@
       </div>
     </div>
 
-    <!-- FormSubmit 設定 / 自動付与項目 -->
-    <input type="hidden" name="_subject" value="【パンフレット依頼】Webシミュレーターより">
-    <input type="hidden" name="_template" value="table">
-    <input type="hidden" name="_captcha" value="false">
-    <input type="hidden" name="_autoresponse" value="パンフレット依頼を受け付けました。担当者より折り返しご連絡いたします。(株式会社OneBe)">
-    <input type="hidden" name="_next" id="orderNext" value="">
+    <!-- 自動付与項目(仕様) -->
     <input type="hidden" name="折り方" id="specFold" value="">
     <input type="hidden" name="表紙位置" id="specCover" value="">
     <input type="hidden" name="仕上がり" id="specSize" value="">
@@ -400,9 +404,10 @@
 
     <div class="modal-actions">
       <button type="button" class="reset" id="orderCancel">キャンセル</button>
-      <button type="submit" class="action" style="margin:0;">この内容で送信</button>
+      <button type="submit" class="action" id="orderSubmit" style="margin:0;">この内容で送信</button>
     </div>
-    <p class="note" style="margin-top:10px;">送信すると、入力内容と上の両面プルーフ画像がフォーム送信サービス(FormSubmit)経由で担当者宛に届きます。</p>
+    <div id="orderStatus" class="order-status" hidden></div>
+    <p class="note" style="margin-top:10px;">送信すると、入力内容と上の両面プルーフ画像が、自社ドメイン(onebe-create.com)から担当者宛にメールで届きます。</p>
   </form>
 </div>
 
@@ -938,11 +943,22 @@
 
   document.getElementById('saveImg').addEventListener('click', downloadProof);
 
-  // ---- 依頼フォーム(モーダル / FormSubmit で画像添付メールを自動送信) ----
+  // ---- 依頼フォーム(モーダル / Cloudflare Worker + Resend で画像添付メール送信) ----
+  // ▼ デプロイした Worker のURLに差し替えてください(例: https://pamphlet-order.xxx.workers.dev)
+  var WORKER_ENDPOINT = 'https://pamphlet-order.example.workers.dev';
+
   var orderModal   = document.getElementById('orderModal');
   var orderForm    = document.getElementById('orderForm');
   var attachmentEl = document.getElementById('attachment');
+  var orderStatus  = document.getElementById('orderStatus');
+  var orderSubmit  = document.getElementById('orderSubmit');
   var currentProofDataURL = null;
+
+  function setStatus(msg, type) {
+    orderStatus.hidden = !msg;
+    orderStatus.textContent = msg || '';
+    orderStatus.className = 'order-status' + (type ? ' ' + type : '');
+  }
 
   function foldLabelText() {
     return state.foldType === 'half' ? '二つ折り'
@@ -961,6 +977,7 @@
   }
 
   function openOrder() {
+    setStatus('');
     // 両面プルーフを生成してプレビュー表示(添付にも流用)
     currentProofDataURL = renderProof('image/jpeg', 0.92);
     document.getElementById('proofPreview').src = currentProofDataURL;
@@ -985,18 +1002,40 @@
     if (e.target === orderModal) closeOrder(); // 背景クリックで閉じる
   });
 
-  orderForm.addEventListener('submit', function () {
+  orderForm.addEventListener('submit', function (e) {
+    e.preventDefault(); // 画面遷移せず fetch で送信
+
     // 生成済みの両面プルーフ画像を添付ファイルとして注入(手動添付不要)
     if (!currentProofDataURL) currentProofDataURL = renderProof('image/jpeg', 0.92);
     var file = dataURLtoFile(currentProofDataURL, 'pamphlet-proof.jpg');
     var dt = new DataTransfer();
     dt.items.add(file);
     attachmentEl.files = dt.files;
-    // 送信後に元ページへ戻す(http/https の場合のみ)
-    if (/^https?:$/.test(location.protocol)) {
-      document.getElementById('orderNext').value = location.href;
-    }
-    // preventDefault せず、そのまま FormSubmit へ通常送信
+
+    var fd = new FormData(orderForm);
+
+    orderSubmit.disabled = true;
+    setStatus('送信中…');
+
+    fetch(WORKER_ENDPOINT, { method: 'POST', body: fd })
+      .then(function (r) {
+        return r.json().catch(function () { return { ok: r.ok }; });
+      })
+      .then(function (d) {
+        if (d && d.ok) {
+          setStatus('送信しました。ありがとうございました。担当者よりご連絡いたします。', 'ok');
+          orderForm.reset();
+          setTimeout(closeOrder, 2200);
+        } else {
+          setStatus('送信に失敗しました。お手数ですが時間をおいて再度お試しください。', 'err');
+        }
+      })
+      .catch(function () {
+        setStatus('送信に失敗しました(ネットワークエラー)。', 'err');
+      })
+      .then(function () {
+        orderSubmit.disabled = false;
+      });
   });
 
   // ---- リサイズ & 描画ループ ----

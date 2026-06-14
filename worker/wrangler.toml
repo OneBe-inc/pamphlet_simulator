@@ -1,0 +1,6 @@
+name = "pamphlet-order"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+# RESEND_API_KEY はシークレットとして登録する(toml には書かない):
+#   wrangler secret put RESEND_API_KEY

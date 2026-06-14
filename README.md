@@ -16,7 +16,7 @@
 | 照明の明るさ | 0〜100%(初期値 75%) |
 | プレビュー上下反転 | 描画結果を縦ミラー反転(ドラッグの縦操作も反転補正) |
 | 両面を画像で保存 | 展開状態の表面・中面を上下に並べた1枚のPNGプルーフを書き出し |
-| パンフレット依頼 | 画面右下のボタンで依頼フォーム(モーダル)を表示。基本情報・依頼内容を確認して送信すると、両面プルーフ画像を自動添付して担当者メールへ通知が届く(FormSubmit 利用) |
+| パンフレット依頼 | 画面右下のボタンで依頼フォーム(モーダル)を表示。基本情報・依頼内容を確認して送信すると、両面プルーフ画像を自動添付して担当者メールへ通知が届く(Cloudflare Worker + Resend、自社ドメイン送信。`worker/` 参照) |
 | 3D操作 | ドラッグで回転、ホイール / ピンチで拡大縮小、視点リセットボタン |
 
 ## 使い方
@@ -49,17 +49,15 @@ npx serve trifold-simulator
   表面を正面(`theta=0`)・中面を背面(`theta=π`)から平行に近い向きで撮影し、1枚のPNGに上下合成する。
   WebGL のフレームバッファ読み出しのため `WebGLRenderer({ preserveDrawingBuffer: true })` を有効化。
 - 右下「この画像でパンフレットを依頼する」ボタンは依頼フォーム(モーダル)を開く。送信は
-  [FormSubmit](https://formsubmit.co/) を利用し、バックエンド無しで指定メールへ通知する。
-  - フォームは `enctype="multipart/form-data"` の通常POST。`submit` 時に `renderProof('image/jpeg')` の
-    結果を `dataURLtoFile()` で File 化し、`DataTransfer` で隠し `input[name=attachment]` に注入して自動添付する。
-  - 制御用の隠しフィールド: `_subject` / `_template=table` / `_captcha=false` / `_autoresponse` / `_next`。
-    `_next` は http/https で表示中のときのみ現ページURLを入れ、送信後に戻る。
-  - **通知先メールはフォームの `action="https://formsubmit.co/<メール>"` で指定**(現状 `issei.masuya@onebe-create.com`)。
-  - **初回のみ FormSubmit からのアクティベーション必須**: 公開後に一度テスト送信し、担当者メールに届く
-    確認リンクをクリックするまで通知は配信されない。
+  **Cloudflare Worker + [Resend](https://resend.com/)** 経由で、自社ドメイン(onebe-create.com)から
+  担当者メールへ通知する(セットアップは `worker/README.md`)。
+  - `submit` 時に `renderProof('image/jpeg')` の結果を `dataURLtoFile()` で File 化し、`DataTransfer` で
+    隠し `input[name=attachment]` に注入。`FormData` にまとめ `fetch()` で Worker へ POST(画面遷移なし)。
+  - 結果はモーダル内に成功/失敗を表示。送信先 Worker は定数 **`WORKER_ENDPOINT`** で指定(デプロイ後に差し替え)。
+  - Worker 側で `multipart/form-data` を解析し、Resend API で `TO_EMAIL` 宛に画像添付メールを送信。
+    `reply_to` に依頼者メールを入れる。通知先・差出人は Worker の `TO_EMAIL` / `FROM_EMAIL`。
   - 添付サイズ対策として画像は JPEG(品質0.92)で送信。WebGL 読み出しのため `preserveDrawingBuffer: true`。
-  - 注意: `file://` で開いた場合も送信自体は可能だが `_next` での復帰は効かない(FormSubmit の既定ページが表示)。
-    実運用は静的ホスティング(http/https)推奨。
+  - 自社ドメインの認証済み(DKIM/SPF)メールになるため、共有IP起因の迷惑メール隔離を回避できる。
 
 ## 免責
 
