@@ -3,1062 +3,213 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>A4仕上がり 折りパンフレットシミュレーター</title>
+<title>OneBe 印刷シミュレーター</title>
+<meta name="description" content="名刺・のぼり・パンフレットなど、飲食店・住宅メーカー向け印刷物の仕上がりをブラウザ上で確認できるシミュレーター集。">
 <style>
   :root {
     --bg: #f4f7fb;
     --panel: #ffffff;
-    --panel2: #f7fafd;
     --text: #2b3441;
     --sub: #7b8694;
     --accent: #3b8cf0;
     --accent-soft: #e7f1fd;
     --border: #dfe6ef;
+    --navy: #101f44;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; }
   body {
     font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
     background: var(--bg);
     color: var(--text);
-    display: flex;
-    overflow: hidden;
-  }
-  #sidebar {
-    width: 320px;
-    min-width: 320px;
-    height: 100%;
-    overflow-y: auto;
-    background: var(--panel);
-    border-right: 1px solid var(--border);
-    box-shadow: 2px 0 12px rgba(60, 90, 140, .06);
-    padding: 20px 18px 40px;
-  }
-  #sidebar .brand {
-    display: block;
-    height: 26px;
-    width: auto;
-    margin-bottom: 14px;
-  }
-  #sidebar h1 {
-    font-size: 16px;
-    line-height: 1.4;
-    margin-bottom: 4px;
-  }
-  #sidebar .lead {
-    font-size: 11.5px;
-    color: var(--sub);
-    margin-bottom: 18px;
     line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
   }
-  .group {
-    background: var(--panel2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px 14px;
-    margin-bottom: 14px;
+  a { color: inherit; text-decoration: none; }
+
+  /* ヘッダー */
+  header {
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 10;
   }
-  .group h2 {
-    font-size: 12px;
-    color: var(--accent);
-    margin-bottom: 10px;
-    letter-spacing: .05em;
+  .header-inner {
+    max-width: 1080px; margin: 0 auto;
+    padding: 14px 24px;
+    display: flex; align-items: center; gap: 12px;
   }
-  .radio-row { display: flex; gap: 8px; }
-  .radio-row label {
-    flex: 1;
-    display: block;
+  .header-inner img { height: 26px; width: auto; display: block; }
+  .header-inner .sep { width: 1px; height: 20px; background: var(--border); }
+  .header-inner .site-name { font-size: 14px; font-weight: bold; letter-spacing: .02em; }
+
+  /* ヒーロー */
+  .hero {
+    background: linear-gradient(135deg, #16306a 0%, #101f44 100%);
+    color: #fff;
+    padding: 56px 24px 64px;
     text-align: center;
-    font-size: 12px;
-    padding: 8px 4px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    cursor: pointer;
-    user-select: none;
-    color: var(--sub);
-    transition: all .15s;
   }
-  .radio-row input { display: none; }
-  .radio-row input:checked + span { color: var(--accent); font-weight: bold; }
-  .radio-row label:has(input:checked) {
-    border-color: var(--accent);
-    background: var(--accent-soft);
-    color: var(--accent);
+  .hero h1 { font-size: 28px; line-height: 1.45; margin-bottom: 14px; }
+  .hero h1 .accent { color: #8fc0ff; }
+  .hero p { font-size: 14px; color: #c7d3ea; max-width: 620px; margin: 0 auto; }
+  @media (max-width: 600px) { .hero h1 { font-size: 22px; } }
+
+  /* メイン */
+  main { max-width: 1080px; margin: 0 auto; padding: 40px 24px 64px; }
+  .section-head { display: flex; align-items: baseline; gap: 10px; margin: 0 0 18px; }
+  .section-head h2 { font-size: 18px; }
+  .section-head span { font-size: 12px; color: var(--sub); }
+
+  /* カードグリッド */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 18px;
   }
-  .file-row { margin-bottom: 10px; }
-  .file-row:last-child { margin-bottom: 0; }
-  .file-row .file-label {
-    font-size: 12px;
-    margin-bottom: 5px;
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-  }
-  .file-row .file-name {
-    font-size: 10px;
-    color: var(--sub);
-    max-width: 150px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .file-btn {
-    display: block;
-    width: 100%;
-    font-size: 12px;
-    padding: 8px;
-    text-align: center;
-    border: 1px dashed var(--border);
-    border-radius: 8px;
-    color: var(--sub);
-    cursor: pointer;
-    transition: all .15s;
-  }
-  .file-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
-  .file-row input[type=file] { display: none; }
-  .slot-head { font-size: 12px; margin-bottom: 6px; color: var(--text); }
-  .slot-grid { display: flex; gap: 6px; margin-bottom: 10px; }
-  .slot {
-    flex: 1 1 0; min-width: 0;
+  .card {
     position: relative;
-    min-height: 62px;
-    border: 1px dashed var(--border);
-    border-radius: 8px;
-    padding: 6px 4px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 20px;
     display: flex; flex-direction: column;
-    align-items: center; justify-content: center; gap: 3px;
-    text-align: center; font-size: 10px; color: var(--sub);
-    cursor: pointer; overflow: hidden;
-    transition: all .15s;
+    transition: transform .15s, box-shadow .15s, border-color .15s;
   }
-  .slot:hover, .slot.dragover {
+  .card.available { cursor: pointer; }
+  .card.available:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px rgba(40, 70, 130, .14);
     border-color: var(--accent);
-    background: var(--accent-soft);
-    color: var(--accent);
   }
-  .slot.filled { border-style: solid; border-color: var(--accent); }
-  .slot input[type=file] { display: none; }
-  .slot .slot-no { font-size: 13px; font-weight: bold; position: relative; z-index: 1; }
-  .slot .slot-name { line-height: 1.3; word-break: break-all; position: relative; z-index: 1; }
-  .slot .thumb {
-    position: absolute; inset: 0;
-    background-size: cover; background-position: center;
-  }
-  .slot.filled .slot-no, .slot.filled .slot-name {
-    background: rgba(255, 255, 255, .8);
-    border-radius: 4px; padding: 0 3px;
-    color: var(--text);
-  }
-  .slot .slot-del {
-    position: absolute; top: 3px; right: 3px; z-index: 2;
-    width: 18px; height: 18px; padding: 0;
-    line-height: 16px; text-align: center;
-    border: none; border-radius: 50%;
-    background: rgba(43, 52, 65, .72); color: #fff;
-    font-size: 12px; cursor: pointer;
-  }
-  .slot .slot-del:hover { background: #e2553d; }
-  button.action {
-    width: 100%; padding: 9px; font-size: 12px;
-    background: var(--accent-soft); color: var(--accent);
-    border: 1px solid var(--accent); border-radius: 8px;
-    cursor: pointer; margin-bottom: 8px;
-  }
-  button.action:hover { background: var(--accent); color: #fff; }
-  #orderBtn {
-    position: absolute; right: 16px; bottom: 16px; z-index: 5;
-    padding: 12px 18px;
-    background: var(--accent); color: #fff;
-    border: none; border-radius: 10px;
-    font-size: 13px; font-weight: bold;
-    cursor: pointer;
-    box-shadow: 0 4px 14px rgba(59, 140, 240, .4);
-  }
-  #orderBtn:hover { background: #2f7fe0; }
-  #orderBtn:active { transform: translateY(1px); }
-  .modal-overlay {
-    position: fixed; inset: 0; z-index: 50;
-    background: rgba(20, 30, 45, .55);
+  .card.soon { opacity: .72; }
+
+  .icon {
+    width: 52px; height: 52px; border-radius: 14px;
     display: flex; align-items: center; justify-content: center;
-    padding: 20px;
+    font-size: 26px; margin-bottom: 14px;
+    background: var(--accent-soft);
   }
-  .modal-overlay[hidden] { display: none; }
-  .modal {
-    position: relative;
-    width: 100%; max-width: 760px;
-    max-height: 90vh; overflow-y: auto;
-    background: var(--panel); border-radius: 14px;
-    padding: 22px 22px 18px;
-    box-shadow: 0 18px 50px rgba(20, 40, 80, .35);
+  .card h3 { font-size: 16px; margin-bottom: 6px; }
+  .card .desc { font-size: 12.5px; color: var(--sub); flex: 1; margin-bottom: 14px; }
+
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+  .tag {
+    font-size: 10.5px; color: var(--accent);
+    background: var(--accent-soft);
+    padding: 3px 8px; border-radius: 999px;
   }
-  .modal-close {
-    position: absolute; top: 12px; right: 12px;
-    width: 30px; height: 30px; border: none; border-radius: 50%;
-    background: var(--panel2); color: var(--sub);
-    font-size: 18px; cursor: pointer;
+
+  .card-foot { display: flex; align-items: center; justify-content: space-between; }
+  .btn {
+    display: inline-block;
+    font-size: 12.5px; font-weight: bold;
+    color: #fff; background: var(--accent);
+    padding: 9px 16px; border-radius: 9px;
   }
-  .modal-close:hover { background: var(--accent-soft); color: var(--accent); }
-  .modal-title { font-size: 17px; margin-bottom: 16px; }
-  .modal-body { display: flex; gap: 18px; }
-  .modal-preview { flex: 1 1 0; min-width: 0; }
-  .modal-preview img {
-    width: 100%; border: 1px solid var(--border); border-radius: 8px; background: #fff;
+  .card.available:hover .btn { background: #2f7fe0; }
+  .badge-soon {
+    font-size: 11px; color: var(--sub);
+    background: #eef1f6; border: 1px solid var(--border);
+    padding: 5px 12px; border-radius: 999px;
   }
-  .modal-fields { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
-  .modal-label { font-size: 12px; color: var(--accent); font-weight: bold; margin-top: 4px; }
-  .modal-fields input, .modal-fields select, .modal-fields textarea {
-    width: 100%; padding: 8px 10px; font-size: 13px;
-    border: 1px solid var(--border); border-radius: 8px;
-    font-family: inherit; color: var(--text); background: #fff;
+  .ribbon {
+    position: absolute; top: 14px; right: 14px;
+    font-size: 10.5px; font-weight: bold; color: #1f9d55;
+    background: #e6f6ec; padding: 3px 9px; border-radius: 999px;
   }
-  .modal-fields input:focus, .modal-fields select:focus, .modal-fields textarea:focus {
-    outline: none; border-color: var(--accent);
-  }
-  .spec-summary { font-size: 12px; color: var(--sub); line-height: 1.7; }
-  .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
-  .modal-actions .reset, .modal-actions .action { flex: 1; margin-bottom: 0; }
-  .order-status {
-    margin-top: 12px; padding: 9px 12px;
-    border-radius: 8px; font-size: 12.5px; text-align: center;
-    background: var(--accent-soft); color: var(--accent);
-  }
-  .order-status[hidden] { display: none; }
-  .order-status.ok  { background: #e6f6ec; color: #1f9d55; }
-  .order-status.err { background: #fdecea; color: #d6492f; }
-  .modal-actions .action:disabled { opacity: .6; cursor: default; }
-  @media (max-width: 680px) {
-    .modal-body { flex-direction: column; }
-  }
-  .slider-row { margin-bottom: 12px; }
-  .slider-row:last-child { margin-bottom: 0; }
-  .slider-row .slider-label {
-    display: flex;
-    justify-content: space-between;
-    font-size: 12px;
-    margin-bottom: 6px;
-  }
-  .slider-row .val { color: var(--accent); font-variant-numeric: tabular-nums; }
-  input[type=range] {
-    width: 100%;
-    accent-color: var(--accent);
-  }
-  input[type=checkbox] {
-    accent-color: var(--accent);
-    width: 16px; height: 16px;
-    cursor: pointer;
-  }
-  .check-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 12px;
-    margin-bottom: 12px;
-    cursor: pointer;
-    user-select: none;
-  }
-  .spec, .note {
-    font-size: 11px;
-    color: var(--sub);
-    line-height: 1.7;
-  }
-  .spec li { margin-left: 1.2em; }
-  button.reset {
-    width: 100%;
-    padding: 8px;
-    font-size: 12px;
-    background: transparent;
-    color: var(--sub);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    cursor: pointer;
-  }
-  button.reset:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
-  #viewer { flex: 1; position: relative; min-width: 0; }
-  #viewer canvas { display: block; }
-  #hint {
-    position: absolute;
-    left: 12px;
-    bottom: 10px;
-    font-size: 11px;
-    color: var(--sub);
-    pointer-events: none;
-  }
-  @media (max-width: 760px) {
-    body { flex-direction: column; overflow-y: auto; }
-    #sidebar { width: 100%; min-width: 0; height: auto; order: 2; border-right: none; }
-    #viewer { width: 100%; height: 55vh; min-height: 320px; order: 1; }
+
+  /* フッター */
+  footer {
+    border-top: 1px solid var(--border);
+    background: var(--panel);
+    padding: 24px; text-align: center;
+    font-size: 12px; color: var(--sub);
   }
 </style>
 </head>
 <body>
 
-<aside id="sidebar">
-  <img class="brand" src="data:image/png;base64,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" alt="OneBe">
-  <h1>A4仕上がり 折りパンフレットシミュレーター</h1>
-  <p class="lead">折りたたむとA4サイズになる二つ折り・三つ折りパンフレットの仕上がりイメージを、ブラウザ上の3Dプレビューで確認できます。</p>
+<header>
+  <div class="header-inner">
+    <img src="assets/onebe-logo.png" alt="OneBe">
+    <div class="sep"></div>
+    <div class="site-name">印刷シミュレーター</div>
+  </div>
+</header>
 
-  <div class="group">
-    <h2>1. 折り方</h2>
-    <div class="radio-row">
-      <label><input type="radio" name="foldType" value="c" checked><span>巻き三つ折り</span></label>
-      <label><input type="radio" name="foldType" value="z"><span>Z折り</span></label>
-      <label><input type="radio" name="foldType" value="half"><span>二つ折り</span></label>
-    </div>
+<section class="hero">
+  <h1>印刷物の仕上がりを、<span class="accent">注文前に</span>たしかめる。</h1>
+  <p>名刺・のぼり・パンフレットなど、飲食店・住宅メーカー向けの印刷物の仕上がりイメージを、ブラウザ上のシミュレーターで確認できます。使いたいツールを選んでください。</p>
+</section>
+
+<main>
+  <div class="section-head">
+    <h2>シミュレーター一覧</h2>
+    <span>使いたい印刷物を選択</span>
   </div>
 
-  <div class="group">
-    <h2>2. 表紙位置</h2>
-    <div class="radio-row">
-      <label><input type="radio" name="cover" value="right" checked><span>右が表紙(標準)</span></label>
-      <label><input type="radio" name="cover" value="left"><span>左が表紙(逆折り)</span></label>
+  <div class="grid">
+
+    <!-- パンフレット(利用可能) -->
+    <a class="card available" href="pamphlet/">
+      <div class="ribbon">利用可能</div>
+      <div class="icon">📖</div>
+      <h3>パンフレット</h3>
+      <p class="desc">A4仕上がりの三つ折り・Z折り・二つ折りを3Dでプレビュー。表面/中面のデザインを面ごとに割り当てて、折り上がりを確認できます。</p>
+      <div class="tags"><span class="tag">住宅メーカー</span><span class="tag">飲食店</span></div>
+      <div class="card-foot"><span class="btn">シミュレーターを開く</span></div>
+    </a>
+
+    <!-- 名刺 -->
+    <div class="card soon">
+      <div class="icon">🪪</div>
+      <h3>名刺</h3>
+      <p class="desc">表裏のレイアウトや用紙・角丸などの仕上がりを確認。担当者ごとの差し替えにも対応予定。</p>
+      <div class="tags"><span class="tag">全業種</span></div>
+      <div class="card-foot"><span class="badge-soon">準備中</span></div>
     </div>
+
+    <!-- のぼり -->
+    <div class="card soon">
+      <div class="icon">🚩</div>
+      <h3>のぼり</h3>
+      <p class="desc">店頭・屋外に設置したイメージで、配色や文字の視認性を確認。サイズ違いの比較にも対応予定。</p>
+      <div class="tags"><span class="tag">飲食店</span></div>
+      <div class="card-foot"><span class="badge-soon">準備中</span></div>
+    </div>
+
+    <!-- チラシ／フライヤー -->
+    <div class="card soon">
+      <div class="icon">📄</div>
+      <h3>チラシ / フライヤー</h3>
+      <p class="desc">A4・B5など定型サイズの表裏デザインをプレビュー。折り加工との組み合わせも確認予定。</p>
+      <div class="tags"><span class="tag">飲食店</span><span class="tag">住宅メーカー</span></div>
+      <div class="card-foot"><span class="badge-soon">準備中</span></div>
+    </div>
+
+    <!-- ポスター -->
+    <div class="card soon">
+      <div class="icon">🖼️</div>
+      <h3>ポスター</h3>
+      <p class="desc">A1・B2などの大判サイズで、掲示時の見え方や余白バランスを確認できる予定です。</p>
+      <div class="tags"><span class="tag">飲食店</span></div>
+      <div class="card-foot"><span class="badge-soon">準備中</span></div>
+    </div>
+
+    <!-- メニュー表 -->
+    <div class="card soon">
+      <div class="icon">📋</div>
+      <h3>メニュー表</h3>
+      <p class="desc">単票・折りメニューの仕上がりをプレビュー。卓上での見え方を想定した確認に対応予定。</p>
+      <div class="tags"><span class="tag">飲食店</span></div>
+      <div class="card-foot"><span class="badge-soon">準備中</span></div>
+    </div>
+
   </div>
+</main>
 
-  <div class="group">
-    <h2>3. デザインアップロード</h2>
-    <div class="slot-head">表面(OUTER)</div>
-    <div id="outerSlots" class="slot-grid"></div>
-    <div class="slot-head">中面(INNER)</div>
-    <div id="innerSlots" class="slot-grid"></div>
-    <p class="note" style="margin-top:8px;">各パネル(全<span id="panelCount">3</span>面)に1枚ずつ、A4(210×297mm)相当の画像をドラッグ&ドロップ、またはクリックして指定できます。①②③…は展開時の左からの順番です。</p>
-  </div>
+<footer>
+  © 株式会社OneBe ／ 印刷シミュレーター
+</footer>
 
-  <div class="group">
-    <h2>4. プレビュー</h2>
-    <div class="slider-row">
-      <div class="slider-label"><span>折り具合</span><span class="val"><span id="foldVal">0</span>%</span></div>
-      <input type="range" id="foldSlider" min="0" max="100" value="0">
-    </div>
-    <div class="slider-row">
-      <div class="slider-label"><span>照明の明るさ</span><span class="val"><span id="lightVal">75</span>%</span></div>
-      <input type="range" id="lightSlider" min="0" max="100" value="75">
-    </div>
-    <label class="check-row"><span>プレビューを上下反転</span><input type="checkbox" id="flipV"></label>
-    <div style="margin-top:12px;">
-      <button class="action" id="saveImg">両面(表面・中面)を画像で保存</button>
-      <button class="reset" id="resetView">視点をリセット</button>
-    </div>
-  </div>
-
-  <div class="group">
-    <h2>仕様</h2>
-    <ul class="spec">
-      <li>仕上がりサイズ:A4(210×297mm)</li>
-      <li>展開サイズ:約<span id="unfoldW2">630</span>×297mm</li>
-      <li>対応折り:巻き三つ折り / Z折り / 二つ折り</li>
-      <li>推奨環境:Chrome / Safari / Firefox / Edge 最新版(WebGL対応)</li>
-    </ul>
-  </div>
-
-  <p class="note">
-    プレビュー・画像生成はブラウザ内で処理されます。「この画像でパンフレットを依頼する」から依頼フォームを送信した場合のみ、入力内容と両面プルーフ画像が送信サービス(FormSubmit)経由で担当者宛に送信されます。<br>
-    本ツールのシミュレーション結果はイメージです。実際の印刷物の仕上がり(色味・折り位置など)を保証するものではありません。
-  </p>
-</aside>
-
-<div id="viewer">
-  <div id="hint">ドラッグ:回転 / ホイール・ピンチ:拡大縮小</div>
-  <button id="orderBtn">この画像でパンフレットを依頼する</button>
-</div>
-
-<div id="orderModal" class="modal-overlay" hidden>
-  <form id="orderForm" class="modal">
-    <button type="button" class="modal-close" id="orderClose" title="閉じる">×</button>
-    <h2 class="modal-title">パンフレット印刷を依頼</h2>
-
-    <div class="modal-body">
-      <div class="modal-preview">
-        <div class="modal-label">送信される両面プルーフ画像</div>
-        <img id="proofPreview" alt="両面プルーフ画像">
-      </div>
-
-      <div class="modal-fields">
-        <div class="modal-label">基本情報</div>
-        <input type="text"  name="会社名" placeholder="会社名 ※必須" required>
-        <input type="text"  name="ご担当者名" placeholder="ご担当者名 ※必須" required>
-        <input type="email" name="email" placeholder="返信用メールアドレス ※必須" required>
-        <input type="tel"   name="電話番号" placeholder="電話番号">
-
-        <div class="modal-label">依頼内容</div>
-        <input type="number" name="部数" placeholder="部数 ※必須" min="1" required>
-        <select name="用紙">
-          <option value="">用紙(任意)</option>
-          <option>コート紙</option>
-          <option>マットコート紙</option>
-          <option>上質紙</option>
-          <option>その他(備考へ記入)</option>
-        </select>
-        <input type="text" name="納期希望" placeholder="納期希望(例:7月上旬)">
-        <textarea name="備考" rows="3" placeholder="ご要望・備考"></textarea>
-
-        <div class="modal-label">仕様(自動)</div>
-        <div id="specSummary" class="spec-summary"></div>
-      </div>
-    </div>
-
-    <!-- 自動付与項目(仕様) -->
-    <input type="hidden" name="折り方" id="specFold" value="">
-    <input type="hidden" name="表紙位置" id="specCover" value="">
-    <input type="hidden" name="仕上がり" id="specSize" value="">
-    <input type="file" id="attachment" name="attachment" accept="image/*" style="display:none">
-
-    <div class="modal-actions">
-      <button type="button" class="reset" id="orderCancel">キャンセル</button>
-      <button type="submit" class="action" id="orderSubmit" style="margin:0;">この内容で送信</button>
-    </div>
-    <div id="orderStatus" class="order-status" hidden></div>
-    <p class="note" style="margin-top:10px;">送信すると、入力内容と上の両面プルーフ画像が、自社ドメイン(onebe-create.com)から担当者宛にメールで届きます。</p>
-  </form>
-</div>
-
-<script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
-<script>
-(function () {
-  'use strict';
-
-  // ---- 寸法(1 unit = 1mm) ----
-  var PANEL_W = 210, PANEL_H = 297, THICK = 0.6;
-
-  // ---- シーン ----
-  var viewer = document.getElementById('viewer');
-  var renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.outputEncoding = THREE.sRGBEncoding;
-  viewer.appendChild(renderer.domElement);
-
-  var scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xe8eff7);
-
-  var camera = new THREE.PerspectiveCamera(40, 1, 1, 8000);
-
-  var ambient = new THREE.AmbientLight(0xffffff, 0.6);
-  scene.add(ambient);
-  var keyLight = new THREE.DirectionalLight(0xffffff, 0.9);
-  keyLight.position.set(300, 400, 500);
-  scene.add(keyLight);
-  var backLight = new THREE.DirectionalLight(0xffffff, 0.5);
-  backLight.position.set(-300, 200, -500);
-  scene.add(backLight);
-
-  // ---- 用紙(折り方に応じてヒンジ構造を組み立てる) ----
-  var root = new THREE.Group();
-  scene.add(root);
-
-  var paperEdge = new THREE.MeshStandardMaterial({ color: 0xf2f0ea, roughness: 0.9 });
-
-  // BoxGeometry のマテリアル順: [+x, -x, +y, -y, +z(front=表面), -z(back=中面)]
-  // -z 面のUVは元々左右反転で貼られるため、裏側から見たときに正像になる。
-  function makePanel() {
-    var geo = new THREE.BoxGeometry(PANEL_W, PANEL_H, THICK);
-    var front = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.55 });
-    var back  = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.55 });
-    return new THREE.Mesh(geo, [paperEdge, paperEdge, paperEdge, paperEdge, front, back]);
-  }
-
-  var panels = [];                 // 展開時 左→右 のパネル
-  var pivots = [];                 // 折りでリセットするヒンジ
-  var pivotLeft = null, pivotRight = null;
-
-  function clearPaper() {
-    for (var i = root.children.length - 1; i >= 0; i--) root.remove(root.children[i]);
-    panels = []; pivots = []; pivotLeft = pivotRight = null;
-  }
-
-  // 三つ折り(3パネル): 中央パネル固定・左右パネルをヒンジで回転
-  function buildTrifold() {
-    clearPaper();
-    var center = makePanel();
-    root.add(center);
-
-    pivotLeft = new THREE.Group();
-    pivotLeft.position.x = -PANEL_W / 2;
-    var lp = makePanel(); lp.position.x = -PANEL_W / 2;
-    pivotLeft.add(lp); root.add(pivotLeft);
-
-    pivotRight = new THREE.Group();
-    pivotRight.position.x = PANEL_W / 2;
-    var rp = makePanel(); rp.position.x = PANEL_W / 2;
-    pivotRight.add(rp); root.add(pivotRight);
-
-    panels = [lp, center, rp]; // 展開時 左→右
-    pivots = [pivotLeft, pivotRight];
-  }
-
-  // 二つ折り(2パネル): 中央の折り線(x=0)を軸に、表紙でない側を背面へ折る
-  function buildHalffold() {
-    clearPaper();
-    pivotLeft = new THREE.Group();
-    pivotLeft.position.x = 0;
-    var lp = makePanel(); lp.position.x = -PANEL_W / 2; // 左パネル [-210,0]
-    pivotLeft.add(lp); root.add(pivotLeft);
-
-    pivotRight = new THREE.Group();
-    pivotRight.position.x = 0;
-    var rp = makePanel(); rp.position.x = PANEL_W / 2;  // 右パネル [0,210]
-    pivotRight.add(rp); root.add(pivotRight);
-
-    panels = [lp, rp]; // 展開時 左→右
-    pivots = [pivotLeft, pivotRight];
-  }
-
-  // ---- テクスチャ ----
-  // パネル1枚ぶんのテクスチャを生成。
-  //  custom がある(=その面に画像をアップロード済み): 画像をそのパネル全面に1枚マッピング。
-  //  custom が無い: guide 画像をパネル数で等分スライスして割り当て。
-  function makePanelTexture(side, i, custom, guide, n) {
-    var t = (custom || guide).clone();
-    t.needsUpdate = true;
-    t.encoding = THREE.sRGBEncoding;
-    t.wrapS = THREE.ClampToEdgeWrapping;
-    t.wrapT = THREE.ClampToEdgeWrapping;
-    t.anisotropy = renderer.capabilities.getMaxAnisotropy();
-    if (custom) {
-      t.repeat.set(1, 1);
-      t.offset.set(0, 0);
-    } else {
-      t.repeat.set(1 / n, 1);
-      // 中面は裏側から見るためパネル順が左右逆になる
-      t.offset.set(side === 'outer' ? i / n : (n - 1 - i) / n, 0);
-    }
-    return t;
-  }
-
-  // 2色の間を n 段階で補間した色配列
-  function shades(c1, c2, n) {
-    var out = [];
-    for (var i = 0; i < n; i++) {
-      var k = n === 1 ? 0 : i / (n - 1);
-      var r = Math.round(c1[0] + (c2[0] - c1[0]) * k);
-      var g = Math.round(c1[1] + (c2[1] - c1[1]) * k);
-      var b = Math.round(c1[2] + (c2[2] - c1[2]) * k);
-      out.push('rgb(' + r + ',' + g + ',' + b + ')');
-    }
-    return out;
-  }
-
-  // デフォルトのガイド画像をcanvasで生成(パネル数 = colors.length)
-  function makeGuideTexture(label, colors) {
-    var n = colors.length;
-    var w = n * 630, h = 891; // 210mm × 3px/mm = 630px / パネル
-    var cv = document.createElement('canvas');
-    cv.width = w; cv.height = h;
-    var ctx = cv.getContext('2d');
-    for (var i = 0; i < n; i++) {
-      var cx = i * w / n + w / (2 * n);
-      ctx.fillStyle = colors[i];
-      ctx.fillRect(i * w / n, 0, w / n, h);
-      ctx.fillStyle = 'rgba(0,0,0,0.55)';
-      ctx.font = 'bold 90px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(label, cx, h / 2 - 70);
-      ctx.font = 'bold 150px sans-serif';
-      ctx.fillText('' + (i + 1), cx, h / 2 + 80);
-    }
-    // 折り線(破線)
-    ctx.strokeStyle = 'rgba(0,0,0,0.4)';
-    ctx.lineWidth = 4;
-    ctx.setLineDash([24, 18]);
-    for (var k = 1; k < n; k++) {
-      var x = k * w / n;
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
-    }
-    var tex = new THREE.CanvasTexture(cv);
-    tex.encoding = THREE.sRGBEncoding;
-    return tex;
-  }
-
-  // 各パネルにアップロードされた画像(THREE.Texture / objectURL / ファイル名)。null ならガイド。
-  var panelTex  = { outer: [], inner: [] };
-  var panelURL  = { outer: [], inner: [] };
-  var panelName = { outer: [], inner: [] };
-
-  function applyTextures() {
-    var n = panels.length;
-    var guide = {
-      outer: makeGuideTexture('表面 OUTER', shades([0xcf, 0xe3, 0xf8], [0xaa, 0xce, 0xf2], n)),
-      inner: makeGuideTexture('中面 INNER', shades([0xfd, 0xe9, 0xc8], [0xfb, 0xd4, 0x98], n))
-    };
-    ['outer', 'inner'].forEach(function (side) {
-      var matIndex = side === 'outer' ? 4 : 5;
-      for (var i = 0; i < n; i++) {
-        var mat = panels[i].material[matIndex];
-        mat.map = makePanelTexture(side, i, panelTex[side][i], guide[side], n);
-        mat.color.set(0xffffff);
-        mat.needsUpdate = true;
-      }
-    });
-  }
-
-  // 折り方に応じて用紙を組み立て直し、テクスチャ・スロット・表示を更新
-  function buildPaper() {
-    if (state.foldType === 'half') buildHalffold(); else buildTrifold();
-    applyTextures();
-    renderSlots();
-    updateLabels();
-  }
-
-  // ---- デザイン画像(1面=1パネルにつき1データ。ドラッグ&ドロップ / クリック) ----
-  var CIRCLED = ['①', '②', '③', '④', '⑤', '⑥'];
-
-  function loadPanelFile(side, i, file) {
-    if (!file || file.type.indexOf('image/') !== 0) return;
-    var url = URL.createObjectURL(file);
-    new THREE.TextureLoader().load(url, function (tex) {
-      tex.encoding = THREE.sRGBEncoding;
-      if (panelURL[side][i]) URL.revokeObjectURL(panelURL[side][i]); // 旧画像を解放
-      panelTex[side][i]  = tex;
-      panelURL[side][i]  = url;
-      panelName[side][i] = file.name;
-      applyTextures();
-      renderSlots();
-    });
-  }
-
-  // パネルの画像を削除してガイドに戻す
-  function deletePanel(side, i) {
-    if (panelURL[side][i]) URL.revokeObjectURL(panelURL[side][i]);
-    panelTex[side][i]  = null;
-    panelURL[side][i]  = null;
-    panelName[side][i] = null;
-    applyTextures();
-    renderSlots();
-  }
-
-  function makeSlot(side, i) {
-    var slot = document.createElement('label');
-    slot.className = 'slot' + (panelTex[side][i] ? ' filled' : '');
-
-    if (panelURL[side][i]) {
-      var thumb = document.createElement('span');
-      thumb.className = 'thumb';
-      thumb.style.backgroundImage = 'url("' + panelURL[side][i] + '")';
-      slot.appendChild(thumb);
-    }
-
-    if (panelTex[side][i]) {
-      var del = document.createElement('button');
-      del.type = 'button';
-      del.className = 'slot-del';
-      del.textContent = '×';
-      del.title = 'この画像を削除';
-      del.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        deletePanel(side, i);
-      });
-      slot.appendChild(del);
-    }
-
-    var no = document.createElement('span');
-    no.className = 'slot-no';
-    no.textContent = CIRCLED[i] || (i + 1);
-    slot.appendChild(no);
-
-    var name = document.createElement('span');
-    name.className = 'slot-name';
-    name.textContent = panelTex[side][i] ? (panelName[side][i] || '設定済み') : 'D&D / クリック';
-    slot.appendChild(name);
-
-    var input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.addEventListener('change', function () {
-      loadPanelFile(side, i, input.files && input.files[0]);
-    });
-    slot.appendChild(input);
-
-    slot.addEventListener('dragover', function (e) {
-      e.preventDefault();
-      slot.classList.add('dragover');
-    });
-    slot.addEventListener('dragleave', function () {
-      slot.classList.remove('dragover');
-    });
-    slot.addEventListener('drop', function (e) {
-      e.preventDefault();
-      slot.classList.remove('dragover');
-      var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-      loadPanelFile(side, i, f);
-    });
-
-    return slot;
-  }
-
-  function renderSlots() {
-    ['outer', 'inner'].forEach(function (side) {
-      var host = document.getElementById(side + 'Slots');
-      if (!host) return;
-      host.innerHTML = '';
-      for (var i = 0; i < panels.length; i++) host.appendChild(makeSlot(side, i));
-    });
-  }
-
-  // ---- 折りたたみロジック ----
-  // 回転方向(rotation.y): 左パネルは負で奥(-z)へ、右パネルは正で奥(-z)へ折れる
-  var state = {
-    foldType: 'c',
-    coverRight: true,
-    fold: 0,     // 0..1
-    light: 0.75, // 0..1
-    flipV: false // プレビューの上下反転
-  };
-
-  function clamp01(v) { return Math.min(1, Math.max(0, v)); }
-
-  function applyFold() {
-    if (!pivotLeft || !pivotRight) return;
-    var t = state.fold;
-    // 紙の厚み分、完全な180°より僅かに手前で止めて重なりを表現
-    var INNER_ANGLE = Math.PI * 0.994; // 先に内側へ折り込むパネル
-    var OUTER_ANGLE = Math.PI * 0.982; // 後から外側を巻くパネル(=表紙)
-    var Z_ANGLE     = Math.PI * 0.991;
-    var HALF_ANGLE  = Math.PI * 0.991;
-
-    if (state.foldType === 'half') {
-      // 二つ折り: 中央の折り線を軸に、表紙でない側を背面(-z)へ折る
-      if (state.coverRight) {
-        pivotRight.rotation.y = 0;                // 右が表紙(固定)
-        pivotLeft.rotation.y  = -t * HALF_ANGLE;  // 左を背面へ
-      } else {
-        pivotLeft.rotation.y  = 0;                // 左が表紙(固定)
-        pivotRight.rotation.y =  t * HALF_ANGLE;  // 右を背面へ
-      }
-    } else if (state.foldType === 'c') {
-      // 巻き三つ折り: 反対側のパネルを先に折り込み、表紙側のパネルで外から巻く
-      var t1 = clamp01(t * 2);
-      var t2 = clamp01(t * 2 - 1);
-      if (state.coverRight) {
-        pivotLeft.rotation.y  = -t1 * INNER_ANGLE;
-        pivotRight.rotation.y =  t2 * OUTER_ANGLE;
-      } else {
-        pivotRight.rotation.y =  t1 * INNER_ANGLE;
-        pivotLeft.rotation.y  = -t2 * OUTER_ANGLE;
-      }
-    } else {
-      // Z折り: 左右を同時に互い違いに折る
-      var s = state.coverRight ? -1 : 1; // 右表紙: 左を奥へ・右を手前へ
-      pivotLeft.rotation.y  = s * t * Z_ANGLE;
-      pivotRight.rotation.y = s * t * Z_ANGLE;
-    }
-  }
-
-  function applyLight() {
-    var k = state.light;
-    ambient.intensity = 0.15 + 0.7 * k;
-    keyLight.intensity = 0.2 + 1.0 * k;
-    backLight.intensity = 0.1 + 0.55 * k;
-  }
-
-  // ---- UIバインド ----
-  // 折り方に応じて展開サイズ・分割数の表示を更新
-  function updateLabels() {
-    var n = panels.length;
-    var w = n === 2 ? 420 : 630; // 二つ折り=A3(420×297) / 三つ折り≒630×297
-    var vals = { unfoldW2: w, panelCount: n };
-    for (var id in vals) {
-      var el = document.getElementById(id);
-      if (el) el.textContent = vals[id];
-    }
-  }
-
-  document.querySelectorAll('input[name=foldType]').forEach(function (el) {
-    el.addEventListener('change', function () {
-      state.foldType = el.value;
-      buildPaper(); // パネル数が変わるため組み立て直す
-      applyFold();
-    });
-  });
-  document.querySelectorAll('input[name=cover]').forEach(function (el) {
-    el.addEventListener('change', function () {
-      state.coverRight = el.value === 'right';
-      pivots.forEach(function (p) { p.rotation.y = 0; });
-      applyFold();
-    });
-  });
-
-  var foldSlider = document.getElementById('foldSlider');
-  var foldVal = document.getElementById('foldVal');
-  foldSlider.addEventListener('input', function () {
-    state.fold = foldSlider.value / 100;
-    foldVal.textContent = foldSlider.value;
-    applyFold();
-  });
-
-  var lightSlider = document.getElementById('lightSlider');
-  var lightVal = document.getElementById('lightVal');
-  lightSlider.addEventListener('input', function () {
-    state.light = lightSlider.value / 100;
-    lightVal.textContent = lightSlider.value;
-    applyLight();
-  });
-
-  // プレビューを上下反転(描画結果を縦ミラー。ドラッグの縦操作も反転補正)
-  var flipCheck = document.getElementById('flipV');
-  flipCheck.addEventListener('change', function () {
-    state.flipV = flipCheck.checked;
-    renderer.domElement.style.transform = state.flipV ? 'scaleY(-1)' : 'none';
-  });
-
-  // ---- カメラ操作(ドラッグ回転 / ホイール・ピンチ拡大縮小) ----
-  var orbit = { theta: 0.35, phi: 1.35, dist: 950 };
-  var ORBIT_HOME = { theta: 0.35, phi: 1.35, dist: 950 };
-  var MIN_DIST = 250, MAX_DIST = 3000;
-
-  function updateCamera() {
-    orbit.phi = Math.min(Math.PI - 0.05, Math.max(0.05, orbit.phi));
-    orbit.dist = Math.min(MAX_DIST, Math.max(MIN_DIST, orbit.dist));
-    var sp = Math.sin(orbit.phi), cp = Math.cos(orbit.phi);
-    camera.position.set(
-      orbit.dist * sp * Math.sin(orbit.theta),
-      orbit.dist * cp,
-      orbit.dist * sp * Math.cos(orbit.theta)
-    );
-    camera.lookAt(0, 0, 0);
-  }
-
-  var pointers = new Map();
-  var lastPinch = 0;
-  var el = renderer.domElement;
-  el.style.touchAction = 'none';
-
-  el.addEventListener('pointerdown', function (e) {
-    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    el.setPointerCapture(e.pointerId);
-  });
-  el.addEventListener('pointermove', function (e) {
-    if (!pointers.has(e.pointerId)) return;
-    var p = pointers.get(e.pointerId);
-    if (pointers.size === 1) {
-      orbit.theta -= (e.clientX - p.x) * 0.006;
-      orbit.phi   -= (e.clientY - p.y) * 0.006 * (state.flipV ? -1 : 1);
-      updateCamera();
-    }
-    p.x = e.clientX; p.y = e.clientY;
-    if (pointers.size === 2) {
-      var pts = Array.from(pointers.values());
-      var d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
-      if (lastPinch > 0) {
-        orbit.dist *= lastPinch / d;
-        updateCamera();
-      }
-      lastPinch = d;
-    }
-  });
-  function endPointer(e) {
-    pointers.delete(e.pointerId);
-    if (pointers.size < 2) lastPinch = 0;
-  }
-  el.addEventListener('pointerup', endPointer);
-  el.addEventListener('pointercancel', endPointer);
-  el.addEventListener('wheel', function (e) {
-    e.preventDefault();
-    orbit.dist *= e.deltaY > 0 ? 1.1 : 0.9;
-    updateCamera();
-  }, { passive: false });
-
-  document.getElementById('resetView').addEventListener('click', function () {
-    orbit.theta = ORBIT_HOME.theta;
-    orbit.phi = ORBIT_HOME.phi;
-    orbit.dist = ORBIT_HOME.dist;
-    updateCamera();
-  });
-
-  // ---- 両面プルーフ画像(表面・中面ともに見える形)を生成 ----
-  function renderProof(mime, quality) {
-    var EXPORT_W = 1320, EXPORT_H = 622; // 1面ぶんの描画サイズ(≒630:297 + 余白)
-    var saved = {
-      fold: state.fold, theta: orbit.theta, phi: orbit.phi, dist: orbit.dist,
-      w: viewer.clientWidth, h: viewer.clientHeight,
-      aspect: camera.aspect, bg: scene.background,
-      transform: renderer.domElement.style.transform,
-      amb: ambient.intensity, key: keyLight.intensity, back: backLight.intensity
-    };
-
-    // 展開(平ら)・CSS反転解除・白背景・均一照明で書き出し
-    state.fold = 0; applyFold();
-    renderer.domElement.style.transform = 'none';
-    scene.background = new THREE.Color(0xffffff);
-    ambient.intensity = 1.0; keyLight.intensity = 0.18; backLight.intensity = 0.12;
-    renderer.setSize(EXPORT_W, EXPORT_H, false);
-    camera.aspect = EXPORT_W / EXPORT_H;
-    camera.updateProjectionMatrix();
-
-    // 全パネルが収まる距離
-    var spreadW = panels.length * PANEL_W, spreadH = PANEL_H;
-    var fovRad = camera.fov * Math.PI / 180;
-    var fitH = Math.max(spreadH, spreadW / camera.aspect) * 1.16;
-    var dist = fitH / (2 * Math.tan(fovRad / 2));
-
-    // 合成キャンバス(表面=上 / 中面=下)
-    var head = 46, pad = 26;
-    var out = document.createElement('canvas');
-    out.width = EXPORT_W;
-    out.height = pad * 3 + head * 2 + EXPORT_H * 2;
-    var c = out.getContext('2d');
-    c.fillStyle = '#ffffff';
-    c.fillRect(0, 0, out.width, out.height);
-
-    function shot(theta, label, y) {
-      // 正面/背面から平行に近い向きで撮影(表面=+z / 中面=-z)
-      orbit.theta = theta; orbit.phi = Math.PI / 2; orbit.dist = dist;
-      updateCamera();
-      renderer.render(scene, camera);
-      c.fillStyle = '#2b3441';
-      c.font = 'bold 26px sans-serif';
-      c.textAlign = 'left';
-      c.textBaseline = 'middle';
-      c.fillText(label, pad, y + head / 2);
-      c.drawImage(renderer.domElement, 0, y + head, EXPORT_W, EXPORT_H);
-    }
-
-    shot(0, '表面 OUTER', pad);
-    shot(Math.PI, '中面 INNER(背面側)', pad * 2 + head + EXPORT_H);
-
-    var url = out.toDataURL(mime || 'image/png', quality);
-
-    // 状態を復元
-    scene.background = saved.bg;
-    ambient.intensity = saved.amb; keyLight.intensity = saved.key; backLight.intensity = saved.back;
-    renderer.setSize(saved.w, saved.h, false);
-    camera.aspect = saved.aspect; camera.updateProjectionMatrix();
-    state.fold = saved.fold; applyFold();
-    renderer.domElement.style.transform = saved.transform;
-    orbit.theta = saved.theta; orbit.phi = saved.phi; orbit.dist = saved.dist;
-    updateCamera();
-    renderer.render(scene, camera);
-
-    return url;
-  }
-
-  function downloadProof() {
-    var url = renderProof();
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = 'onebe-pamphlet-proof.png';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  }
-
-  document.getElementById('saveImg').addEventListener('click', downloadProof);
-
-  // ---- 依頼フォーム(モーダル / Cloudflare Worker + Resend で画像添付メール送信) ----
-  // ▼ デプロイした Worker のURLに差し替えてください(例: https://pamphlet-order.xxx.workers.dev)
-  var WORKER_ENDPOINT = 'https://pamphlet-order.example.workers.dev';
-
-  var orderModal   = document.getElementById('orderModal');
-  var orderForm    = document.getElementById('orderForm');
-  var attachmentEl = document.getElementById('attachment');
-  var orderStatus  = document.getElementById('orderStatus');
-  var orderSubmit  = document.getElementById('orderSubmit');
-  var currentProofDataURL = null;
-
-  function setStatus(msg, type) {
-    orderStatus.hidden = !msg;
-    orderStatus.textContent = msg || '';
-    orderStatus.className = 'order-status' + (type ? ' ' + type : '');
-  }
-
-  function foldLabelText() {
-    return state.foldType === 'half' ? '二つ折り'
-         : state.foldType === 'c'    ? '巻き三つ折り' : 'Z折り';
-  }
-
-  // dataURL(base64)を File に変換して添付できるようにする
-  function dataURLtoFile(dataurl, filename) {
-    var arr = dataurl.split(',');
-    var mime = arr[0].match(/:(.*?);/)[1];
-    var bstr = atob(arr[1]);
-    var n = bstr.length;
-    var u8 = new Uint8Array(n);
-    while (n--) u8[n] = bstr.charCodeAt(n);
-    return new File([u8], filename, { type: mime });
-  }
-
-  function openOrder() {
-    setStatus('');
-    // 両面プルーフを生成してプレビュー表示(添付にも流用)
-    currentProofDataURL = renderProof('image/jpeg', 0.92);
-    document.getElementById('proofPreview').src = currentProofDataURL;
-
-    var fold  = foldLabelText();
-    var cover = state.coverRight ? '右が表紙' : '左が表紙';
-    var size  = '仕上がりA4(210×297mm) / 展開 約' + (panels.length === 2 ? 420 : 630) + '×297mm / ' + panels.length + '面';
-    document.getElementById('specFold').value  = fold;
-    document.getElementById('specCover').value = cover;
-    document.getElementById('specSize').value  = size;
-    document.getElementById('specSummary').textContent = fold + ' / ' + cover + ' / ' + size;
-
-    orderModal.hidden = false;
-  }
-
-  function closeOrder() { orderModal.hidden = true; }
-
-  document.getElementById('orderBtn').addEventListener('click', openOrder);
-  document.getElementById('orderClose').addEventListener('click', closeOrder);
-  document.getElementById('orderCancel').addEventListener('click', closeOrder);
-  orderModal.addEventListener('click', function (e) {
-    if (e.target === orderModal) closeOrder(); // 背景クリックで閉じる
-  });
-
-  orderForm.addEventListener('submit', function (e) {
-    e.preventDefault(); // 画面遷移せず fetch で送信
-
-    // 生成済みの両面プルーフ画像を添付ファイルとして注入(手動添付不要)
-    if (!currentProofDataURL) currentProofDataURL = renderProof('image/jpeg', 0.92);
-    var file = dataURLtoFile(currentProofDataURL, 'pamphlet-proof.jpg');
-    var dt = new DataTransfer();
-    dt.items.add(file);
-    attachmentEl.files = dt.files;
-
-    var fd = new FormData(orderForm);
-
-    orderSubmit.disabled = true;
-    setStatus('送信中…');
-
-    fetch(WORKER_ENDPOINT, { method: 'POST', body: fd })
-      .then(function (r) {
-        return r.json().catch(function () { return { ok: r.ok }; });
-      })
-      .then(function (d) {
-        if (d && d.ok) {
-          setStatus('送信しました。ありがとうございました。担当者よりご連絡いたします。', 'ok');
-          orderForm.reset();
-          setTimeout(closeOrder, 2200);
-        } else {
-          setStatus('送信に失敗しました。お手数ですが時間をおいて再度お試しください。', 'err');
-        }
-      })
-      .catch(function () {
-        setStatus('送信に失敗しました(ネットワークエラー)。', 'err');
-      })
-      .then(function () {
-        orderSubmit.disabled = false;
-      });
-  });
-
-  // ---- リサイズ & 描画ループ ----
-  function resize() {
-    var w = viewer.clientWidth, h = viewer.clientHeight;
-    renderer.setSize(w, h);
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-  }
-  window.addEventListener('resize', resize);
-
-  function animate() {
-    requestAnimationFrame(animate);
-    renderer.render(scene, camera);
-  }
-
-  resize();
-  updateCamera();
-  buildPaper();
-  applyFold();
-  applyLight();
-  animate();
-})();
-</script>
 </body>
 </html>
