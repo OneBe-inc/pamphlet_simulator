@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OneBe 印刷シミュレーター</title>
-<meta name="description" content="名刺・のぼり・パンフレットなど、飲食店・住宅メーカー向け印刷物の仕上がりをブラウザ上で確認できるシミュレーター集。">
+<meta name="description" content="名刺・のぼり・パンフレットなど、飲食店・住宅メーカー・美容サロン・小売店向け印刷物の仕上がりをブラウザ上で確認できるシミュレーター集。">
 <style>
   :root {
     --bg: #f4f7fb;
@@ -58,6 +58,28 @@
   .section-head { display: flex; align-items: baseline; gap: 10px; margin: 0 0 18px; }
   .section-head h2 { font-size: 18px; }
   .section-head span { font-size: 12px; color: var(--sub); }
+
+  /* 検索・業界フィルター */
+  .toolbar { margin-bottom: 22px; }
+  .search-box { position: relative; margin-bottom: 14px; }
+  .search-box input {
+    width: 100%; padding: 12px 14px 12px 40px;
+    border: 1px solid var(--border); border-radius: 10px;
+    font-size: 14px; font-family: inherit; color: var(--text); background: #fff;
+  }
+  .search-box input:focus { outline: none; border-color: var(--accent); }
+  .search-box .ic {
+    position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+    color: var(--sub); font-size: 15px; pointer-events: none;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    padding: 7px 14px; border: 1px solid var(--border); border-radius: 999px;
+    font-size: 13px; background: #fff; color: var(--sub); cursor: pointer;
+    transition: all .15s; user-select: none;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--accent); }
+  .chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 
   /* カードグリッド */
   .grid {
@@ -117,6 +139,13 @@
     background: #e6f6ec; padding: 3px 9px; border-radius: 999px;
   }
 
+  .empty {
+    display: none;
+    text-align: center; color: var(--sub);
+    padding: 48px 20px; font-size: 14px;
+    border: 1px dashed var(--border); border-radius: 14px;
+  }
+
   /* フッター */
   footer {
     border-top: 1px solid var(--border);
@@ -138,29 +167,43 @@
 
 <section class="hero">
   <h1>印刷物の仕上がりを、<span class="accent">注文前に</span>たしかめる。</h1>
-  <p>名刺・のぼり・パンフレットなど、飲食店・住宅メーカー向けの印刷物の仕上がりイメージを、ブラウザ上のシミュレーターで確認できます。使いたいツールを選んでください。</p>
+  <p>名刺・のぼり・パンフレットなど、飲食店・住宅メーカー・美容サロン・小売店向けの印刷物の仕上がりイメージを、ブラウザ上のシミュレーターで確認できます。使いたいツールを選んでください。</p>
 </section>
 
 <main>
   <div class="section-head">
     <h2>シミュレーター一覧</h2>
-    <span>使いたい印刷物を選択</span>
+    <span>キーワード検索・業界で絞り込み</span>
   </div>
 
-  <div class="grid">
+  <div class="toolbar">
+    <div class="search-box">
+      <span class="ic">🔍</span>
+      <input type="search" id="search" placeholder="キーワードで検索(例:三つ折り、メニュー、名刺 …)" autocomplete="off">
+    </div>
+    <div class="chips" id="chips">
+      <span class="chip active" data-industry="all">すべて</span>
+      <span class="chip" data-industry="飲食店">飲食店</span>
+      <span class="chip" data-industry="住宅メーカー">住宅メーカー</span>
+      <span class="chip" data-industry="美容・サロン">美容・サロン</span>
+      <span class="chip" data-industry="小売店">小売店</span>
+    </div>
+  </div>
+
+  <div class="grid" id="grid">
 
     <!-- パンフレット(利用可能) -->
-    <a class="card available" href="pamphlet/">
+    <a class="card available" href="pamphlet/" data-industries="住宅メーカー,飲食店,美容・サロン" data-keywords="リーフレット 三つ折り 二つ折り Z折り 折り pamphlet brochure">
       <div class="ribbon">利用可能</div>
       <div class="icon">📖</div>
       <h3>パンフレット</h3>
       <p class="desc">A4仕上がりの三つ折り・Z折り・二つ折りを3Dでプレビュー。表面/中面のデザインを面ごとに割り当てて、折り上がりを確認できます。</p>
-      <div class="tags"><span class="tag">住宅メーカー</span><span class="tag">飲食店</span></div>
+      <div class="tags"><span class="tag">住宅メーカー</span><span class="tag">飲食店</span><span class="tag">美容・サロン</span></div>
       <div class="card-foot"><span class="btn">シミュレーターを開く</span></div>
     </a>
 
     <!-- 名刺 -->
-    <div class="card soon">
+    <div class="card soon" data-industries="全業種" data-keywords="ビジネスカード business card 名刺">
       <div class="icon">🪪</div>
       <h3>名刺</h3>
       <p class="desc">表裏のレイアウトや用紙・角丸などの仕上がりを確認。担当者ごとの差し替えにも対応予定。</p>
@@ -169,34 +212,34 @@
     </div>
 
     <!-- のぼり -->
-    <div class="card soon">
+    <div class="card soon" data-industries="飲食店,小売店" data-keywords="旗 バナー flag のぼり 屋外">
       <div class="icon">🚩</div>
       <h3>のぼり</h3>
       <p class="desc">店頭・屋外に設置したイメージで、配色や文字の視認性を確認。サイズ違いの比較にも対応予定。</p>
-      <div class="tags"><span class="tag">飲食店</span></div>
+      <div class="tags"><span class="tag">飲食店</span><span class="tag">小売店</span></div>
       <div class="card-foot"><span class="badge-soon">準備中</span></div>
     </div>
 
     <!-- チラシ／フライヤー -->
-    <div class="card soon">
+    <div class="card soon" data-industries="飲食店,住宅メーカー,小売店" data-keywords="フライヤー リーフレット flyer チラシ 折込">
       <div class="icon">📄</div>
       <h3>チラシ / フライヤー</h3>
       <p class="desc">A4・B5など定型サイズの表裏デザインをプレビュー。折り加工との組み合わせも確認予定。</p>
-      <div class="tags"><span class="tag">飲食店</span><span class="tag">住宅メーカー</span></div>
+      <div class="tags"><span class="tag">飲食店</span><span class="tag">住宅メーカー</span><span class="tag">小売店</span></div>
       <div class="card-foot"><span class="badge-soon">準備中</span></div>
     </div>
 
     <!-- ポスター -->
-    <div class="card soon">
+    <div class="card soon" data-industries="飲食店,美容・サロン" data-keywords="大判 掲示 poster ポスター A1 B2">
       <div class="icon">🖼️</div>
       <h3>ポスター</h3>
       <p class="desc">A1・B2などの大判サイズで、掲示時の見え方や余白バランスを確認できる予定です。</p>
-      <div class="tags"><span class="tag">飲食店</span></div>
+      <div class="tags"><span class="tag">飲食店</span><span class="tag">美容・サロン</span></div>
       <div class="card-foot"><span class="badge-soon">準備中</span></div>
     </div>
 
-    <!-- メニュー表 -->
-    <div class="card soon">
+    <!-- メニュー表(飲食店向け) -->
+    <div class="card soon" data-industries="飲食店" data-keywords="お品書き 飲食 menu メニュー 卓上 ラミネート">
       <div class="icon">📋</div>
       <h3>メニュー表</h3>
       <p class="desc">単票・折りメニューの仕上がりをプレビュー。卓上での見え方を想定した確認に対応予定。</p>
@@ -204,12 +247,72 @@
       <div class="card-foot"><span class="badge-soon">準備中</span></div>
     </div>
 
+    <!-- ショップカード(飲食・サロン・小売向け) -->
+    <div class="card soon" data-industries="飲食店,美容・サロン,小売店" data-keywords="スタンプカード ポイントカード ショップカード shop card 来店">
+      <div class="icon">🎟️</div>
+      <h3>ショップカード</h3>
+      <p class="desc">名刺サイズのショップカード・スタンプカードの表裏を確認。来店促進の販促物に。対応予定。</p>
+      <div class="tags"><span class="tag">飲食店</span><span class="tag">美容・サロン</span><span class="tag">小売店</span></div>
+      <div class="card-foot"><span class="badge-soon">準備中</span></div>
+    </div>
+
+    <!-- 会社案内(住宅メーカー・法人向け) -->
+    <div class="card soon" data-industries="住宅メーカー,全業種" data-keywords="会社概要 ブローシャー 冊子 company profile 会社案内 物件">
+      <div class="icon">🏢</div>
+      <h3>会社案内</h3>
+      <p class="desc">複数ページの会社案内・物件資料の構成や見開きをプレビュー。住宅メーカー・法人の営業資料に。対応予定。</p>
+      <div class="tags"><span class="tag">住宅メーカー</span><span class="tag">全業種</span></div>
+      <div class="card-foot"><span class="badge-soon">準備中</span></div>
+    </div>
+
   </div>
+
+  <div class="empty" id="emptyMsg">該当するシミュレーターが見つかりませんでした。キーワードや業界を変えてお試しください。</div>
 </main>
 
 <footer>
   © 株式会社OneBe ／ 印刷シミュレーター
 </footer>
+
+<script>
+(function () {
+  'use strict';
+  var search = document.getElementById('search');
+  var chips = Array.prototype.slice.call(document.querySelectorAll('.chip'));
+  var cards = Array.prototype.slice.call(document.querySelectorAll('#grid .card'));
+  var emptyMsg = document.getElementById('emptyMsg');
+  var activeIndustry = 'all';
+
+  function applyFilter() {
+    var q = search.value.trim().toLowerCase();
+    var shown = 0;
+    cards.forEach(function (card) {
+      var inds = card.getAttribute('data-industries') || '';
+      var matchInd = activeIndustry === 'all'
+        || inds.indexOf(activeIndustry) >= 0
+        || inds.indexOf('全業種') >= 0;
+      var haystack = (card.textContent + ' ' + (card.getAttribute('data-keywords') || '')).toLowerCase();
+      var matchText = !q || haystack.indexOf(q) >= 0;
+      var show = matchInd && matchText;
+      card.style.display = show ? '' : 'none';
+      if (show) shown++;
+    });
+    emptyMsg.style.display = shown ? 'none' : 'block';
+  }
+
+  search.addEventListener('input', applyFilter);
+  chips.forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      chips.forEach(function (c) { c.classList.remove('active'); });
+      chip.classList.add('active');
+      activeIndustry = chip.getAttribute('data-industry');
+      applyFilter();
+    });
+  });
+
+  applyFilter();
+})();
+</script>
 
 </body>
 </html>

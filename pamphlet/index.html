@@ -165,6 +165,21 @@
     cursor: pointer; margin-bottom: 8px;
   }
   button.action:hover { background: var(--accent); color: #fff; }
+  .ai-gen { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border); }
+  .ai-gen textarea {
+    width: 100%; font-family: inherit; font-size: 12px;
+    padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); resize: vertical; margin-bottom: 8px;
+  }
+  .ai-gen textarea:focus { outline: none; border-color: var(--accent); }
+  .ai-row { display: flex; gap: 8px; align-items: stretch; }
+  .ai-row select {
+    flex: 1; min-width: 0; font-size: 12px; padding: 8px;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: #fff; color: var(--text);
+  }
+  .ai-row .action { width: auto; margin-bottom: 0; white-space: nowrap; }
+  .ai-row .action:disabled { opacity: .6; cursor: default; }
   #orderBtn {
     position: absolute; right: 16px; bottom: 16px; z-index: 5;
     padding: 12px 18px;
@@ -288,6 +303,53 @@
     #sidebar { width: 100%; min-width: 0; height: auto; order: 2; border-right: none; }
     #viewer { width: 100%; height: 55vh; min-height: 320px; order: 1; }
   }
+
+  /* 折り方・表紙の選択(アイコン図付き) */
+  .opt-list { display: flex; flex-direction: column; gap: 8px; }
+  .opt {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
+    cursor: pointer; user-select: none; transition: all .15s;
+  }
+  .opt:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .opt input { display: none; }
+  .opt:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+  .opt-svg { width: 66px; height: 40px; flex: none; color: var(--sub); }
+  .opt:has(input:checked) .opt-svg { color: var(--accent); }
+  .opt-svg rect.sheet { fill: #fff; stroke: currentColor; stroke-width: 2; }
+  .opt-svg .fl { stroke: #9fb4c9; stroke-width: 1.4; stroke-dasharray: 3 3; }
+  .opt-svg .ar { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .opt-svg .arh { fill: currentColor; }
+  .opt-svg .hl { fill: var(--accent); opacity: .18; }
+  .opt-svg .cover-cap { font-size: 9px; fill: currentColor; font-weight: bold; }
+  .opt-text b { font-size: 13px; display: block; }
+  .opt-text small { display: block; font-size: 11px; color: var(--sub); margin-top: 1px; line-height: 1.4; }
+  .opt:has(input:checked) .opt-text b { color: var(--accent); }
+
+  /* 面の並び(展開図) */
+  .layout {
+    margin-bottom: 14px; padding: 10px 12px;
+    background: var(--panel2); border: 1px solid var(--border); border-radius: 10px;
+  }
+  .layout-title { font-size: 11px; color: var(--sub); margin-bottom: 8px; line-height: 1.5; }
+  .layout-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .layout-row:last-child { margin-bottom: 0; }
+  .layout-side { font-size: 10.5px; color: var(--sub); width: 34px; flex: none; }
+  .layout-cells { display: flex; gap: 4px; flex: 1; }
+  .lc {
+    flex: 1; text-align: center; font-size: 11px; padding: 7px 0;
+    border: 1px solid var(--border); border-radius: 6px; background: #fff; color: var(--text);
+  }
+  .lc.cover { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: bold; }
+  .lc .cap { display: block; font-size: 9px; margin-top: 2px; font-weight: bold; }
+
+  /* スロット見出しの補足・「表紙」バッジ */
+  .slot-head small { font-weight: normal; color: var(--sub); font-size: 10.5px; margin-left: 4px; }
+  .slot .role {
+    position: absolute; top: 3px; left: 3px; z-index: 2;
+    font-size: 9px; font-weight: bold; color: #fff;
+    background: var(--accent); padding: 2px 7px; border-radius: 999px;
+  }
 </style>
 </head>
 <body>
@@ -300,28 +362,86 @@
 
   <div class="group">
     <h2>1. 折り方</h2>
-    <div class="radio-row">
-      <label><input type="radio" name="foldType" value="c" checked><span>巻き三つ折り</span></label>
-      <label><input type="radio" name="foldType" value="z"><span>Z折り</span></label>
-      <label><input type="radio" name="foldType" value="half"><span>二つ折り</span></label>
+    <div class="opt-list">
+      <label class="opt">
+        <input type="radio" name="foldType" value="c" checked>
+        <svg class="opt-svg" viewBox="0 0 92 54" aria-hidden="true">
+          <rect class="sheet" x="5" y="19" width="82" height="26" rx="3"/>
+          <line class="fl" x1="32" y1="19" x2="32" y2="45"/>
+          <line class="fl" x1="60" y1="19" x2="60" y2="45"/>
+          <path class="ar" d="M82 12 q-11 -8 -21 0"/><polygon class="arh" points="61,8 61,16 55,12"/>
+          <path class="ar" d="M10 12 q11 -8 21 0"/><polygon class="arh" points="31,8 31,16 37,12"/>
+        </svg>
+        <span class="opt-text"><b>巻き三つ折り</b><small>両端を内側へ巻き込む、定番の三つ折り</small></span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="foldType" value="z">
+        <svg class="opt-svg" viewBox="0 0 92 54" aria-hidden="true">
+          <rect class="sheet" x="5" y="19" width="82" height="26" rx="3"/>
+          <line class="fl" x1="32" y1="19" x2="32" y2="45"/>
+          <line class="fl" x1="60" y1="19" x2="60" y2="45"/>
+          <polyline class="ar" points="11,13 32,7 60,15 81,9"/><polygon class="arh" points="81,5 81,13 87,9"/>
+        </svg>
+        <span class="opt-text"><b>Z折り</b><small>Z字に交互に折る。パッと開ける</small></span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="foldType" value="half">
+        <svg class="opt-svg" viewBox="0 0 92 54" aria-hidden="true">
+          <rect class="sheet" x="14" y="19" width="64" height="26" rx="3"/>
+          <line class="fl" x1="46" y1="19" x2="46" y2="45"/>
+          <path class="ar" d="M73 12 q-14 -9 -27 0"/><polygon class="arh" points="46,8 46,16 40,12"/>
+        </svg>
+        <span class="opt-text"><b>二つ折り</b><small>真ん中で半分に折る</small></span>
+      </label>
     </div>
   </div>
 
   <div class="group">
-    <h2>2. 表紙位置</h2>
-    <div class="radio-row">
-      <label><input type="radio" name="cover" value="right" checked><span>右が表紙(標準)</span></label>
-      <label><input type="radio" name="cover" value="left"><span>左が表紙(逆折り)</span></label>
+    <h2>2. 表紙の位置</h2>
+    <div class="opt-list">
+      <label class="opt">
+        <input type="radio" name="cover" value="right" checked>
+        <svg class="opt-svg" viewBox="0 0 92 54" aria-hidden="true">
+          <rect class="sheet" x="5" y="14" width="82" height="26" rx="3"/>
+          <line class="fl" x1="32" y1="14" x2="32" y2="40"/>
+          <line class="fl" x1="60" y1="14" x2="60" y2="40"/>
+          <rect class="hl" x="60" y="14" width="27" height="26" rx="3"/>
+          <text class="cover-cap" x="73.5" y="51" text-anchor="middle">表紙</text>
+        </svg>
+        <span class="opt-text"><b>右が表紙</b><small>標準。右端の面が表紙になります</small></span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="cover" value="left">
+        <svg class="opt-svg" viewBox="0 0 92 54" aria-hidden="true">
+          <rect class="sheet" x="5" y="14" width="82" height="26" rx="3"/>
+          <line class="fl" x1="32" y1="14" x2="32" y2="40"/>
+          <line class="fl" x1="60" y1="14" x2="60" y2="40"/>
+          <rect class="hl" x="5" y="14" width="27" height="26" rx="3"/>
+          <text class="cover-cap" x="18.5" y="51" text-anchor="middle">表紙</text>
+        </svg>
+        <span class="opt-text"><b>左が表紙</b><small>左端の面が表紙になります(左開き)</small></span>
+      </label>
     </div>
   </div>
 
   <div class="group">
-    <h2>3. デザインアップロード</h2>
-    <div class="slot-head">表面(OUTER)</div>
+    <h2>3. デザインを入れる</h2>
+    <div id="layoutDiagram" class="layout"></div>
+    <div class="slot-head">外側(おもて面)<small>折りたたむと外に出る面</small></div>
     <div id="outerSlots" class="slot-grid"></div>
-    <div class="slot-head">中面(INNER)</div>
+    <div class="slot-head">内側(なか面)<small>開いたときに見える中身</small></div>
     <div id="innerSlots" class="slot-grid"></div>
-    <p class="note" style="margin-top:8px;">各パネル(全<span id="panelCount">3</span>面)に1枚ずつ、A4(210×297mm)相当の画像をドラッグ&ドロップ、またはクリックして指定できます。①②③…は展開時の左からの順番です。</p>
+    <p class="note" style="margin-top:8px;">各面(全<span id="panelCount">3</span>面)に1枚ずつ、A4(210×297mm)目安の画像をドラッグ&ドロップ、またはクリックで指定できます。①②③…は上の図と同じ並びです。</p>
+
+    <div class="ai-gen">
+      <div class="slot-head">AIで生成して適用(実装イメージ)</div>
+      <textarea id="aiPrompt" rows="2" placeholder="例:海沿いのカフェ 温かい雰囲気 明るい写真"></textarea>
+      <div class="ai-row">
+        <select id="aiTarget"></select>
+        <button id="aiGen" class="action">生成して適用</button>
+      </div>
+      <p class="note" style="margin-top:8px;">※ デモ用のダミー生成です(外部AIには接続していません)。実装時はここで画像生成API(Imagen等)を呼び、返ってきた画像を同じ流れで対象パネルへ反映します。</p>
+    </div>
   </div>
 
   <div class="group">
@@ -596,18 +716,23 @@
     if (state.foldType === 'half') buildHalffold(); else buildTrifold();
     applyTextures();
     renderSlots();
+    updateAITargets();
+    updateLayoutDiagram();
     updateLabels();
   }
 
   // ---- デザイン画像(1面=1パネルにつき1データ。ドラッグ&ドロップ / クリック) ----
   var CIRCLED = ['①', '②', '③', '④', '⑤', '⑥'];
 
+  // blob URL のみ解放(dataURL は no-op)
+  function freeURL(u) { if (u && u.indexOf('blob:') === 0) URL.revokeObjectURL(u); }
+
   function loadPanelFile(side, i, file) {
     if (!file || file.type.indexOf('image/') !== 0) return;
     var url = URL.createObjectURL(file);
     new THREE.TextureLoader().load(url, function (tex) {
       tex.encoding = THREE.sRGBEncoding;
-      if (panelURL[side][i]) URL.revokeObjectURL(panelURL[side][i]); // 旧画像を解放
+      freeURL(panelURL[side][i]); // 旧画像を解放
       panelTex[side][i]  = tex;
       panelURL[side][i]  = url;
       panelName[side][i] = file.name;
@@ -618,7 +743,7 @@
 
   // パネルの画像を削除してガイドに戻す
   function deletePanel(side, i) {
-    if (panelURL[side][i]) URL.revokeObjectURL(panelURL[side][i]);
+    freeURL(panelURL[side][i]);
     panelTex[side][i]  = null;
     panelURL[side][i]  = null;
     panelName[side][i] = null;
@@ -629,6 +754,14 @@
   function makeSlot(side, i) {
     var slot = document.createElement('label');
     slot.className = 'slot' + (panelTex[side][i] ? ' filled' : '');
+
+    // 外側の表紙パネルに「表紙」バッジ(右表紙=右端 / 左表紙=左端)
+    if (side === 'outer' && i === coverIndex()) {
+      var role = document.createElement('span');
+      role.className = 'role';
+      role.textContent = '表紙';
+      slot.appendChild(role);
+    }
 
     if (panelURL[side][i]) {
       var thumb = document.createElement('span');
@@ -694,6 +827,147 @@
       for (var i = 0; i < panels.length; i++) host.appendChild(makeSlot(side, i));
     });
   }
+
+  // ---- AI画像生成(実装イメージ / 外部API未接続のダミー生成) ----
+  function hashStr(s) {
+    var h = 2166136261;
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  }
+  function mulberry(a) {
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function wrapText(ctx, text, x, y, maxW, lh) {
+    var line = '';
+    for (var i = 0; i < text.length; i++) {
+      var test = line + text[i];
+      if (ctx.measureText(test).width > maxW && line) {
+        ctx.fillText(line, x, y); line = text[i]; y += lh;
+      } else { line = test; }
+    }
+    if (line) ctx.fillText(line, x, y);
+  }
+
+  // プロンプトから「生成画像っぽい」ダミーを Canvas で作る(実装では生成API結果に差し替え)
+  function generateMockImage(prompt, seed) {
+    var hsh = hashStr((prompt || '') + '|' + (seed || ''));
+    var rnd = mulberry(hsh);
+    var w = 630, h = 891; // A4比 210:297
+    var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    var ctx = cv.getContext('2d');
+
+    var hue1 = hsh % 360, hue2 = (hsh >> 4) % 360;
+    var g = ctx.createLinearGradient(0, 0, w, h);
+    g.addColorStop(0, 'hsl(' + hue1 + ',62%,58%)');
+    g.addColorStop(1, 'hsl(' + hue2 + ',58%,40%)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+
+    ctx.globalCompositeOperation = 'overlay';
+    for (var i = 0; i < 6; i++) {
+      ctx.beginPath();
+      ctx.fillStyle = 'hsla(' + ((hue1 + i * 47) % 360) + ',70%,72%,0.5)';
+      ctx.arc(rnd() * w, rnd() * h, 70 + rnd() * 220, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+
+    ctx.fillStyle = 'rgba(0,0,0,0.42)'; ctx.fillRect(0, 0, w, 72);
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.font = 'bold 30px sans-serif';
+    ctx.fillText('AI生成イメージ(デモ)', 24, 38);
+
+    ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(0, h - 168, w, 168);
+    ctx.fillStyle = '#fff'; ctx.font = '24px sans-serif'; ctx.textBaseline = 'top';
+    wrapText(ctx, 'prompt: ' + (prompt || '(未入力)'), 24, h - 150, w - 48, 32);
+
+    return cv.toDataURL('image/jpeg', 0.9);
+  }
+
+  // 画像(dataURL / objectURL)を対象パネルに適用(アップロードと同じ流れ)
+  function applyImageToPanel(side, i, url, name) {
+    new THREE.TextureLoader().load(url, function (tex) {
+      tex.encoding = THREE.sRGBEncoding;
+      freeURL(panelURL[side][i]);
+      panelTex[side][i]  = tex;
+      panelURL[side][i]  = url;
+      panelName[side][i] = name;
+      applyTextures();
+      renderSlots();
+    });
+  }
+
+  // 生成して対象スロット(複数可)へ反映
+  function generateInto(targets, prompt) {
+    targets.forEach(function (t) {
+      var url = generateMockImage(prompt, t.side + '-' + t.i);
+      applyImageToPanel(t.side, t.i, url, 'AI生成: ' + (prompt || 'sample'));
+    });
+  }
+
+  // 表紙になるパネル(右表紙=右端 / 左表紙=左端。中央にはならない)
+  function coverIndex() { return state.coverRight ? panels.length - 1 : 0; }
+
+  // 面の並び(展開図)を描画。外側の表紙パネルを明示する。
+  function updateLayoutDiagram() {
+    var host = document.getElementById('layoutDiagram');
+    if (!host) return;
+    var n = panels.length, ci = coverIndex();
+    function row(label, markCover) {
+      var cells = '';
+      for (var i = 0; i < n; i++) {
+        var isCover = markCover && i === ci;
+        cells += '<span class="lc' + (isCover ? ' cover' : '') + '">' + CIRCLED[i] +
+                 (isCover ? '<span class="cap">表紙</span>' : '') + '</span>';
+      }
+      return '<div class="layout-row"><span class="layout-side">' + label +
+             '</span><div class="layout-cells">' + cells + '</div></div>';
+    }
+    host.innerHTML =
+      '<div class="layout-title">仕上がりの面の並び(①②③ は下の入力欄と対応)</div>' +
+      row('外側', true) + row('内側', false);
+  }
+
+  // 生成先セレクトを現在のパネル数に合わせて作り直す
+  function updateAITargets() {
+    var sel = document.getElementById('aiTarget');
+    if (!sel) return;
+    var prev = sel.value;
+    var n = panels.length, html = '';
+    [['outer', '外側'], ['inner', '内側']].forEach(function (s) {
+      html += '<option value="' + s[0] + ':all">' + s[1] + ' すべて</option>';
+      for (var i = 0; i < n; i++) {
+        html += '<option value="' + s[0] + ':' + i + '">' + s[1] + ' ' + CIRCLED[i] + '</option>';
+      }
+    });
+    sel.innerHTML = html;
+    if (prev) sel.value = prev; // 可能なら選択を維持
+  }
+
+  var aiGenBtn = document.getElementById('aiGen');
+  aiGenBtn.addEventListener('click', function () {
+    var prompt = document.getElementById('aiPrompt').value.trim();
+    var v = document.getElementById('aiTarget').value.split(':');
+    var side = v[0];
+    var targets = [];
+    if (v[1] === 'all') {
+      for (var i = 0; i < panels.length; i++) targets.push({ side: side, i: i });
+    } else {
+      targets.push({ side: side, i: parseInt(v[1], 10) });
+    }
+    aiGenBtn.disabled = true;
+    aiGenBtn.textContent = '生成中…';
+    // 体感のためわずかに遅延(実装ではAPI待ち)
+    setTimeout(function () {
+      generateInto(targets, prompt);
+      aiGenBtn.disabled = false;
+      aiGenBtn.textContent = '生成して適用';
+    }, 350);
+  });
 
   // ---- 折りたたみロジック ----
   // 回転方向(rotation.y): 左パネルは負で奥(-z)へ、右パネルは正で奥(-z)へ折れる
@@ -775,6 +1049,8 @@
       state.coverRight = el.value === 'right';
       pivots.forEach(function (p) { p.rotation.y = 0; });
       applyFold();
+      renderSlots();         // 表紙バッジを更新
+      updateLayoutDiagram(); // 展開図を更新
     });
   });
 
