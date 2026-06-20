@@ -305,10 +305,65 @@
     color: var(--sub);
     pointer-events: none;
   }
+  /* モバイル用ヘッダー & ドロワー(デフォルトは非表示=PCでは出さない) */
+  #mobileHeader { display: none; }
+  #drawerBackdrop { display: none; }
+  #drawerClose { display: none; }
+
   @media (max-width: 760px) {
-    body { flex-direction: column; overflow-y: auto; }
-    #sidebar { width: 100%; min-width: 0; height: auto; order: 2; border-right: none; }
-    #viewer { width: 100%; height: 55vh; min-height: 320px; order: 1; }
+    body { flex-direction: column; overflow: hidden; height: 100%; }
+
+    /* 上部ヘッダー(ハンバーガー + ブランド) */
+    #mobileHeader {
+      display: flex; align-items: center; gap: 10px;
+      flex: none; order: 0; height: 52px; padding: 0 12px;
+      background: var(--panel); border-bottom: 1px solid var(--border);
+      box-shadow: 0 1px 6px rgba(60, 90, 140, .06); z-index: 30;
+    }
+    #hamburger {
+      width: 38px; height: 38px; flex: none; padding: 0;
+      border: 1px solid var(--border); border-radius: 9px; background: var(--panel2);
+      cursor: pointer; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 4px;
+    }
+    #hamburger span { display: block; width: 18px; height: 2px; background: var(--text); border-radius: 2px; }
+    #mobileHeader .mh-title { font-size: 14px; font-weight: bold; color: var(--text); line-height: 1.15; }
+    #mobileHeader .mh-title small { display: block; font-size: 10px; color: var(--sub); font-weight: normal; }
+
+    /* 3Dビューワーをメイン表示(ヘッダー下をフルに) */
+    #viewer { width: 100%; flex: 1 1 auto; order: 1; min-height: 0; }
+
+    /* サイドバーは左からスライドするドロワー */
+    #sidebar {
+      position: fixed; top: 0; left: 0; bottom: 0;
+      width: 86%; max-width: 340px; height: 100%; min-width: 0;
+      transform: translateX(-100%); transition: transform .25s ease;
+      z-index: 40; box-shadow: 6px 0 24px rgba(20, 40, 80, .18);
+    }
+    #sidebar.open { transform: none; }
+    /* ヘッダーに集約する項目はドロワー内では隠す */
+    #sidebar > a:first-of-type, #sidebar > .brand, #sidebar > h1, #sidebar > .lead { display: none; }
+    #drawerClose {
+      display: flex; align-items: center; justify-content: center;
+      position: absolute; top: 10px; right: 10px; width: 30px; height: 30px;
+      border: none; border-radius: 50%; background: var(--panel2); color: var(--sub);
+      font-size: 18px; line-height: 1; cursor: pointer; z-index: 2;
+    }
+
+    /* 背景オーバーレイ */
+    #drawerBackdrop {
+      display: block; position: fixed; inset: 0; background: rgba(20, 30, 45, .45);
+      opacity: 0; pointer-events: none; transition: opacity .25s ease; z-index: 35;
+    }
+    #drawerBackdrop.open { opacity: 1; pointer-events: auto; }
+
+    /* 依頼ボタンは画面下部にフル幅(はみ出し防止) */
+    #orderBtn { left: 12px; right: 12px; bottom: 12px; padding: 12px; text-align: center; font-size: 14px; }
+    #hint { display: none; }
+  }
+  @media (max-width: 380px) {
+    .slot-grid { flex-wrap: wrap; }
+    .slot { flex: 1 1 28%; }
   }
 
   /* 折り方・表紙の選択(アイコン図付き) */
@@ -361,7 +416,15 @@
 </head>
 <body>
 
+<header id="mobileHeader">
+  <button id="hamburger" type="button" aria-label="メニューを開く"><span></span><span></span><span></span></button>
+  <div class="mh-title">OneBe パンフレット<small>3Dシミュレーター</small></div>
+</header>
+
+<div id="drawerBackdrop"></div>
+
 <aside id="sidebar">
+  <button id="drawerClose" type="button" aria-label="メニューを閉じる">×</button>
   <a href="../" style="display:inline-block;font-size:11.5px;color:var(--sub);margin-bottom:10px;">← シミュレーター一覧へ</a>
   <img class="brand" src="data:image/png;base64,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" alt="OneBe">
   <h1>A4仕上がり 折りパンフレットシミュレーター</h1>
@@ -754,6 +817,7 @@
     updateAITargets();
     updateLayoutDiagram();
     updateLabels();
+    if (typeof fitCamera === 'function') fitCamera(); // パネル数変化に合わせて距離を再調整
   }
 
   // ---- デザイン画像(1面=1パネルにつき1データ。ドラッグ&ドロップ / クリック) ----
@@ -1113,9 +1177,29 @@
   });
 
   // ---- カメラ操作(ドラッグ回転 / ホイール・ピンチ拡大縮小) ----
-  var orbit = { theta: 0.35, phi: 1.35, dist: 950 };
-  var ORBIT_HOME = { theta: 0.35, phi: 1.35, dist: 950 };
-  var MIN_DIST = 250, MAX_DIST = 3000;
+  var DEFAULT_DIST = 950;
+  var orbit = { theta: 0.35, phi: 1.35, dist: DEFAULT_DIST };
+  var ORBIT_HOME = { theta: 0.35, phi: 1.35, dist: DEFAULT_DIST };
+  var MIN_DIST = 250, MAX_DIST = 3500;
+  var userZoomed = false; // ユーザーが手動でズームしたら自動フィットを止める
+
+  // 展開状態のパネル全体が画面に収まるカメラ距離を算出(縦長スマホ対策)
+  function fitDistance() {
+    var spreadW = (panels.length || 3) * PANEL_W; // 三つ折り=630 / 二つ折り=420
+    var spreadH = PANEL_H;                          // 297
+    var tanV = Math.tan((camera.fov * Math.PI / 180) / 2);
+    var tanH = tanV * (camera.aspect || 1);
+    var d = Math.max((spreadW / 2) / tanH, (spreadH / 2) / tanV) * 1.12; // 余白12%
+    return Math.min(MAX_DIST, Math.max(MIN_DIST, d));
+  }
+
+  // 画面サイズ・折り方に応じて全体が収まる距離へ。手動ズーム中は home のみ更新。
+  function fitCamera(force) {
+    var fit = Math.max(DEFAULT_DIST, fitDistance()); // 広い画面では従来の見た目を維持
+    ORBIT_HOME.dist = fit;
+    if (force || !userZoomed) { orbit.dist = fit; userZoomed = false; }
+    updateCamera();
+  }
 
   function updateCamera() {
     orbit.phi = Math.min(Math.PI - 0.05, Math.max(0.05, orbit.phi));
@@ -1152,6 +1236,7 @@
       var d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
       if (lastPinch > 0) {
         orbit.dist *= lastPinch / d;
+        userZoomed = true;
         updateCamera();
       }
       lastPinch = d;
@@ -1166,14 +1251,14 @@
   el.addEventListener('wheel', function (e) {
     e.preventDefault();
     orbit.dist *= e.deltaY > 0 ? 1.1 : 0.9;
+    userZoomed = true;
     updateCamera();
   }, { passive: false });
 
   document.getElementById('resetView').addEventListener('click', function () {
     orbit.theta = ORBIT_HOME.theta;
     orbit.phi = ORBIT_HOME.phi;
-    orbit.dist = ORBIT_HOME.dist;
-    updateCamera();
+    fitCamera(true); // 画面に合わせて全体が収まる距離へ戻す
   });
 
   // ---- 両面プルーフ画像(表面・中面ともに見える形)を生成 ----
@@ -1511,12 +1596,28 @@
     viewer.appendChild(b);
   }
 
+  // ---- モバイル: サイドメニュー(ドロワー)開閉 ----
+  (function () {
+    var sb = document.getElementById('sidebar');
+    var bd = document.getElementById('drawerBackdrop');
+    function openDrawer() { sb.classList.add('open'); bd.classList.add('open'); }
+    function closeDrawer() { sb.classList.remove('open'); bd.classList.remove('open'); }
+    document.getElementById('hamburger').addEventListener('click', openDrawer);
+    document.getElementById('drawerClose').addEventListener('click', closeDrawer);
+    bd.addEventListener('click', closeDrawer);
+    // PC幅に戻ったら状態をリセット(ドロワー用クラスを残さない)
+    window.addEventListener('resize', function () {
+      if (window.innerWidth > 760) closeDrawer();
+    });
+  })();
+
   // ---- リサイズ & 描画ループ ----
   function resize() {
     var w = viewer.clientWidth, h = viewer.clientHeight;
     renderer.setSize(w, h);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
+    fitCamera(); // 画面幅に合わせて全体が収まる距離へ
   }
   window.addEventListener('resize', resize);
 
