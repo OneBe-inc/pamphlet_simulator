@@ -180,6 +180,13 @@
   }
   .ai-row .action { width: auto; margin-bottom: 0; white-space: nowrap; }
   .ai-row .action:disabled { opacity: .6; cursor: default; }
+  .ai-gen.is-disabled { opacity: .55; }
+  .ai-gen.is-disabled, .ai-gen.is-disabled * { pointer-events: none; }
+  .soon-badge {
+    font-size: 10px; font-weight: bold; color: var(--sub);
+    background: #eef1f6; border: 1px solid var(--border);
+    padding: 2px 8px; border-radius: 999px; margin-left: 6px;
+  }
   #orderBtn {
     position: absolute; right: 16px; bottom: 16px; z-index: 5;
     padding: 12px 18px;
@@ -433,14 +440,14 @@
     <div id="innerSlots" class="slot-grid"></div>
     <p class="note" style="margin-top:8px;">各面(全<span id="panelCount">3</span>面)に1枚ずつ、A4(210×297mm)目安の画像をドラッグ&ドロップ、またはクリックで指定できます。①②③…は上の図と同じ並びです。</p>
 
-    <div class="ai-gen">
-      <div class="slot-head">AIで生成して適用(実装イメージ)</div>
-      <textarea id="aiPrompt" rows="2" placeholder="例:海沿いのカフェ 温かい雰囲気 明るい写真"></textarea>
+    <div class="ai-gen is-disabled" aria-disabled="true">
+      <div class="slot-head">AIで生成して適用 <span class="soon-badge">準備中</span></div>
+      <textarea id="aiPrompt" rows="2" placeholder="例:海沿いのカフェ 温かい雰囲気 明るい写真" disabled></textarea>
       <div class="ai-row">
-        <select id="aiTarget"></select>
-        <button id="aiGen" class="action">生成して適用</button>
+        <select id="aiTarget" disabled></select>
+        <button id="aiGen" class="action" disabled>生成して適用</button>
       </div>
-      <p class="note" style="margin-top:8px;">※ デモ用のダミー生成です(外部AIには接続していません)。実装時はここで画像生成API(Imagen等)を呼び、返ってきた画像を同じ流れで対象パネルへ反映します。</p>
+      <p class="note" style="margin-top:8px;">※ AIによるデザイン生成は現在準備中です(近日対応予定)。</p>
     </div>
   </div>
 
@@ -456,6 +463,7 @@
     </div>
     <label class="check-row"><span>プレビューを上下反転</span><input type="checkbox" id="flipV"></label>
     <div style="margin-top:12px;">
+      <button class="action" id="shareBtn">画像込みの共有リンクを作成</button>
       <button class="action" id="saveImg">両面(表面・中面)を画像で保存</button>
       <button class="reset" id="resetView">視点をリセット</button>
     </div>
@@ -530,6 +538,33 @@
     <div id="orderStatus" class="order-status" hidden></div>
     <p class="note" style="margin-top:10px;">送信すると、入力内容と上の両面プルーフ画像が、自社ドメイン(onebe-create.com)から担当者宛にメールで届きます。</p>
   </form>
+</div>
+
+<!-- 共有リンク作成モーダル -->
+<div id="shareModal" class="modal-overlay" hidden>
+  <div class="modal" style="max-width:560px;">
+    <button type="button" class="modal-close" id="shareClose" title="閉じる">×</button>
+    <h2 class="modal-title">画像込みの共有リンク</h2>
+    <p class="note" id="shareLead" style="margin-bottom:12px;">
+      いまの当てはめ状態(折り方・各面の画像)をそのまま開けるリンクです。お客様にこのURLを送るだけで、同じイメージを3Dで確認していただけます。
+    </p>
+    <div id="shareResult" hidden>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" id="shareUrl" readonly
+          style="flex:1;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:#f7f9fc;">
+        <button type="button" class="action" id="shareCopy" style="width:auto;margin:0;white-space:nowrap;">コピー</button>
+      </div>
+      <p class="note" style="margin-top:8px;">
+        <a id="shareOpen" href="#" target="_blank" rel="noopener">新しいタブで開いて確認する</a>
+        ／　有効期限：作成から90日
+      </p>
+    </div>
+    <div id="shareStatus" class="order-status" hidden></div>
+    <div class="modal-actions" style="margin-top:14px;">
+      <button type="button" class="reset" id="shareCancel">閉じる</button>
+      <button type="button" class="action" id="shareCreate" style="margin:0;">リンクを作成</button>
+    </div>
+  </div>
 </div>
 
 <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
@@ -1315,6 +1350,167 @@
       });
   });
 
+  // ---- 共有リンク(画像込みの当てはめ状態を保存して短いURLを発行) ----
+  // Worker の /share エンドポイント(メール送信と同じ Worker)
+  var SHARE_ENDPOINT = WORKER_ENDPOINT.replace(/\/+$/, '') + '/share';
+
+  var shareModal  = document.getElementById('shareModal');
+  var shareResult = document.getElementById('shareResult');
+  var shareUrlEl  = document.getElementById('shareUrl');
+  var shareOpenEl = document.getElementById('shareOpen');
+  var shareStatus = document.getElementById('shareStatus');
+  var shareCreate = document.getElementById('shareCreate');
+
+  function setShareStatus(msg, type) {
+    shareStatus.hidden = !msg;
+    shareStatus.textContent = msg || '';
+    shareStatus.className = 'order-status' + (type ? ' ' + type : '');
+  }
+
+  // テクスチャ画像を JPEG(dataURL)へ。長辺を1280pxに抑えて容量を圧縮する。
+  function textureToDataURL(tex) {
+    var img = tex && tex.image;
+    if (!img) return null;
+    var iw = img.naturalWidth || img.width;
+    var ih = img.naturalHeight || img.height;
+    if (!iw || !ih) return null;
+    var MAX = 1280;
+    var scale = Math.min(1, MAX / Math.max(iw, ih));
+    var w = Math.max(1, Math.round(iw * scale));
+    var h = Math.max(1, Math.round(ih * scale));
+    var cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    cv.getContext('2d').drawImage(img, 0, 0, w, h);
+    try { return cv.toDataURL('image/jpeg', 0.82); }
+    catch (e) { return null; } // 万一タイント画像なら諦める
+  }
+
+  // 現在の折り方・表紙位置・各面の画像をまとめる
+  function collectShareData() {
+    var data = {
+      v: 1,
+      fold: state.foldType,
+      cover: state.coverRight ? 'right' : 'left',
+      panels: { outer: [], inner: [] }
+    };
+    ['outer', 'inner'].forEach(function (side) {
+      for (var i = 0; i < panels.length; i++) {
+        var tex = panelTex[side][i];
+        var url = tex ? textureToDataURL(tex) : null;
+        data.panels[side].push(url ? { img: url, name: panelName[side][i] || '' } : null);
+      }
+    });
+    return data;
+  }
+
+  function hasAnyImage(data) {
+    return ['outer', 'inner'].some(function (s) {
+      return data.panels[s].some(function (p) { return p && p.img; });
+    });
+  }
+
+  function createShareLink() {
+    if (SHARE_ENDPOINT.indexOf('example.workers.dev') !== -1) {
+      setShareStatus('共有機能の接続先(WORKER_ENDPOINT)が未設定です。デプロイ後のWorker URLを設定してください。', 'err');
+      return;
+    }
+    var data = collectShareData();
+    if (!hasAnyImage(data)) {
+      setShareStatus('画像が1枚も設定されていません。各面に画像を割り当ててからリンクを作成してください。', 'err');
+      return;
+    }
+    shareCreate.disabled = true;
+    setShareStatus('リンクを作成中…');
+    fetch(SHARE_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    })
+      .then(function (r) { return r.json().catch(function () { return { ok: false }; }); })
+      .then(function (d) {
+        if (d && d.ok && d.id) {
+          var url = location.origin + location.pathname + '?share=' + d.id;
+          shareUrlEl.value = url;
+          shareOpenEl.href = url;
+          shareResult.hidden = false;
+          setShareStatus('リンクを作成しました。お客様にこのURLを送ってください。', 'ok');
+        } else {
+          setShareStatus((d && d.error) || 'リンク作成に失敗しました。', 'err');
+        }
+      })
+      .catch(function () { setShareStatus('リンク作成に失敗しました(ネットワークエラー)。', 'err'); })
+      .then(function () { shareCreate.disabled = false; });
+  }
+
+  function openShare() {
+    shareResult.hidden = true;
+    shareUrlEl.value = '';
+    setShareStatus('');
+    shareModal.hidden = false;
+  }
+  function closeShare() { shareModal.hidden = true; }
+
+  document.getElementById('shareBtn').addEventListener('click', openShare);
+  document.getElementById('shareClose').addEventListener('click', closeShare);
+  document.getElementById('shareCancel').addEventListener('click', closeShare);
+  shareCreate.addEventListener('click', createShareLink);
+  shareModal.addEventListener('click', function (e) {
+    if (e.target === shareModal) closeShare();
+  });
+  document.getElementById('shareCopy').addEventListener('click', function () {
+    shareUrlEl.select();
+    var done = function () { setShareStatus('コピーしました。', 'ok'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(shareUrlEl.value).then(done, function () {
+        try { document.execCommand('copy'); done(); } catch (e) {}
+      });
+    } else {
+      try { document.execCommand('copy'); done(); } catch (e) {}
+    }
+  });
+
+  // ?share=<id> 付きで開かれたら、保存済みの状態を取得して当てはめる(顧客閲覧)
+  function applyShareFromURL() {
+    var id = new URLSearchParams(location.search).get('share');
+    if (!id) return;
+    fetch(SHARE_ENDPOINT + '/' + encodeURIComponent(id))
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (!res || !res.ok || !res.data) return;
+        var d = res.data;
+        if (d.fold) {
+          state.foldType = d.fold;
+          var fr = document.querySelector('input[name=foldType][value="' + d.fold + '"]');
+          if (fr) fr.checked = true;
+        }
+        if (d.cover) {
+          state.coverRight = d.cover === 'right';
+          var cr = document.querySelector('input[name=cover][value="' + d.cover + '"]');
+          if (cr) cr.checked = true;
+        }
+        buildPaper();
+        applyFold();
+        ['outer', 'inner'].forEach(function (side) {
+          var arr = (d.panels && d.panels[side]) || [];
+          for (var i = 0; i < arr.length && i < panels.length; i++) {
+            if (arr[i] && arr[i].img) {
+              applyImageToPanel(side, i, arr[i].img, arr[i].name || '共有画像');
+            }
+          }
+        });
+        showSharedBanner();
+      })
+      .catch(function () {});
+  }
+
+  function showSharedBanner() {
+    var b = document.createElement('div');
+    b.textContent = '共有されたデザインを表示中(ドラッグで回転・ホイールで拡大)';
+    b.style.cssText = 'position:absolute;left:16px;top:16px;z-index:6;background:rgba(20,69,122,.92);' +
+      'color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;max-width:80%;';
+    viewer.appendChild(b);
+  }
+
   // ---- リサイズ & 描画ループ ----
   function resize() {
     var w = viewer.clientWidth, h = viewer.clientHeight;
@@ -1334,6 +1530,7 @@
   buildPaper();
   applyFold();
   applyLight();
+  applyShareFromURL(); // ?share=<id> があれば共有状態を当てはめる
   animate();
 })();
 </script>

@@ -16,14 +16,73 @@ const ALLOWED_ORIGINS = [
   'http://127.0.0.1:5500',
 ];
 
+// 共有リンクの有効期限(90日)
+const SHARE_TTL_SECONDS = 90 * 24 * 60 * 60;
+// KV 1件あたりの上限(25MiB)の手前で弾く
+const SHARE_MAX_BYTES = 24 * 1024 * 1024;
+
 function corsHeaders(origin) {
   const allow = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
   return {
     'Access-Control-Allow-Origin': allow,
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Max-Age': '86400',
   };
+}
+
+// ランダムな共有ID(18桁hex)
+function genShareId() {
+  const b = new Uint8Array(9);
+  crypto.getRandomValues(b);
+  let s = '';
+  for (let i = 0; i < b.length; i++) s += b[i].toString(16).padStart(2, '0');
+  return s;
+}
+
+// 共有(画像込みの当てはめ状態)の保存 / 読み出し。
+//   POST /share        … 本文JSONを保存し { ok, id } を返す
+//   GET  /share/<id>   … 保存済みJSONを { ok, data } で返す
+async function handleShare(request, env, origin, path) {
+  if (!env.SHARE_KV) {
+    return json({ ok: false, error: '共有機能が未設定です(KV未バインド)' }, 500, origin);
+  }
+
+  // 読み出し
+  if (request.method === 'GET') {
+    const id = path.slice('/share/'.length).replace(/[^a-f0-9]/gi, '');
+    if (!id) return json({ ok: false, error: 'id がありません' }, 400, origin);
+    const raw = await env.SHARE_KV.get(id);
+    if (!raw) {
+      return json({ ok: false, error: 'リンクが見つからないか期限切れです' }, 404, origin);
+    }
+    return new Response('{"ok":true,"data":' + raw + '}', {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders(origin) },
+    });
+  }
+
+  // 保存
+  if (request.method === 'POST') {
+    let body;
+    try {
+      body = await request.text();
+    } catch (e) {
+      return json({ ok: false, error: '本文を読めません' }, 400, origin);
+    }
+    if (!body || body.length > SHARE_MAX_BYTES) {
+      return json({ ok: false, error: 'データが大きすぎます(画像を減らすか圧縮してください)' }, 413, origin);
+    }
+    // 形式チェック(JSONとして妥当か)
+    try { JSON.parse(body); } catch (e) {
+      return json({ ok: false, error: '不正なデータ形式です' }, 400, origin);
+    }
+    const id = genShareId();
+    await env.SHARE_KV.put(id, body, { expirationTtl: SHARE_TTL_SECONDS });
+    return json({ ok: true, id, expiresInDays: 90 }, 200, origin);
+  }
+
+  return json({ ok: false, error: 'Method not allowed' }, 405, origin);
 }
 
 function json(obj, status, origin) {
@@ -56,6 +115,14 @@ export default {
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: corsHeaders(origin) });
     }
+
+    // 共有(画像込みの当てはめ状態)の保存/読み出しは別ハンドラへ
+    const path = new URL(request.url).pathname;
+    if (path === '/share' || path.startsWith('/share/')) {
+      return handleShare(request, env, origin, path);
+    }
+
+    // 以下は依頼フォーム(メール送信)
     if (request.method !== 'POST') {
       return json({ ok: false, error: 'Method not allowed' }, 405, origin);
     }

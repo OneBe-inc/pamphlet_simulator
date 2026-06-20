@@ -4,3 +4,10 @@ compatibility_date = "2024-11-01"
 
 # RESEND_API_KEY はシークレットとして登録する(toml には書かない):
 #   wrangler secret put RESEND_API_KEY
+
+# 共有リンク(画像込みの当てはめ状態)の保存先 KV。
+# 事前に名前空間を作成し、出力された id を下に貼り付けること:
+#   wrangler kv namespace create SHARE_KV
+[[kv_namespaces]]
+binding = "SHARE_KV"
+id = "<ここに wrangler kv namespace create の出力 id を貼る>"
