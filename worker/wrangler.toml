@@ -10,4 +10,4 @@ compatibility_date = "2024-11-01"
 #   wrangler kv namespace create SHARE_KV
 [[kv_namespaces]]
 binding = "SHARE_KV"
-id = "<ここに wrangler kv namespace create の出力 id を貼る>"
+id = "5117020051c840c8acaa0431c43bcbda"
